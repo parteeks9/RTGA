@@ -1,0 +1,2314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uniphore — AI-Augmented Agent Desktop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* surfaces — Asphalt (graphite) */
+    --bg:#26282B;
+    --panel:#2D2F33;
+    --panel-2:#313338;
+    --card:#383A3F;
+    --card-hi:#404247;
+    --line:#494C51;
+    --line-soft:#3A3C41;
+
+    /* text */
+    --tx:#ECEEF0;
+    --tx-2:#A4A8AE;
+    --tx-3:#74787E;
+
+    /* semantic state language — the signature */
+    --ai:#4DA3FF;        /* AI proposed */
+    --pending:#F5B73D;   /* awaiting your validation */
+    --validated:#43D693; /* you approved */
+    --risk:#FF6B7A;      /* compliance / risk */
+    --human:#B79BFF;     /* human / customer side */
+
+    --ai-bg:rgba(77,163,255,.10);
+    --pending-bg:rgba(245,183,61,.12);
+    --validated-bg:rgba(67,214,147,.12);
+    --risk-bg:rgba(255,107,122,.12);
+    --human-bg:rgba(183,155,255,.12);
+    --on-accent:#06121d;
+
+    --radius:10px;
+    --radius-sm:7px;
+    --shadow:0 8px 28px rgba(0,0,0,.38);
+
+    --f-display:'Space Grotesk',sans-serif;
+    --f-ui:'IBM Plex Sans',sans-serif;
+    --f-mono:'IBM Plex Mono',monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(77,163,255,.06), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(183,155,255,.05), transparent 60%),
+      var(--bg);
+    color:var(--tx);
+    font-family:var(--f-ui);
+    font-size:13px;
+    line-height:1.45;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:rgba(77,163,255,.30)}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  :focus-visible{outline:2px solid var(--ai);outline-offset:2px;border-radius:4px}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#4a4d52;border-radius:20px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  .mono{font-family:var(--f-mono)}
+  .eyebrow{
+    font-family:var(--f-mono);
+    font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--tx-3);font-weight:500;
+  }
+
+  /* ---------- shell ---------- */
+  .app{
+    display:grid;
+    grid-template-rows:54px 1fr 116px;
+    height:100vh;
+  }
+
+  /* ---------- top command bar ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:18px;
+    padding:0 16px;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border-bottom:1px solid var(--line);
+    z-index:30;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding-right:18px;border-right:1px solid var(--line);height:32px}
+  .brand .mark{
+    width:26px;height:26px;border-radius:7px;
+    background:conic-gradient(from 130deg,var(--ai),var(--human),var(--validated),var(--ai));
+    display:grid;place-items:center;position:relative;
+  }
+  .brand .mark::after{content:"";position:absolute;inset:3px;border-radius:4px;background:var(--panel)}
+  .brand .mark span{position:relative;z-index:1;font-family:var(--f-display);font-weight:700;font-size:13px;color:#fff}
+  .brand h1{font-family:var(--f-display);font-size:15px;font-weight:600;letter-spacing:.01em}
+  .brand .sub{font-size:9px;color:var(--tx-3);font-family:var(--f-mono);letter-spacing:.12em;text-transform:uppercase}
+
+  .lob-context{display:flex;align-items:center;gap:8px}
+  .lob-context .label{font-size:10px;color:var(--tx-3);font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.1em}
+  .lob-pill{
+    font-family:var(--f-mono);font-size:11px;font-weight:500;
+    padding:4px 9px;border-radius:6px;background:var(--card);border:1px solid var(--line);
+    color:var(--tx);display:flex;align-items:center;gap:6px;
+  }
+  .lob-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--ai)}
+
+  .search{
+    flex:1;max-width:380px;display:flex;align-items:center;gap:8px;
+    background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:7px 11px;color:var(--tx-3);
+  }
+  .search input{background:none;border:none;color:var(--tx);font-family:var(--f-ui);font-size:12.5px;width:100%}
+  .search input::placeholder{color:var(--tx-3)}
+  .search kbd{
+    font-family:var(--f-mono);font-size:10px;background:var(--panel);border:1px solid var(--line);
+    padding:1px 5px;border-radius:4px;color:var(--tx-3)
+  }
+
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .ai-status{
+    display:flex;align-items:center;gap:8px;padding:5px 11px;border-radius:8px;
+    background:var(--ai-bg);border:1px solid rgba(77,163,255,.3);
+  }
+  .ai-status .pulse{width:7px;height:7px;border-radius:50%;background:var(--ai);box-shadow:0 0 0 0 rgba(77,163,255,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(77,163,255,.5)}70%{box-shadow:0 0 0 7px rgba(77,163,255,0)}100%{box-shadow:0 0 0 0 rgba(77,163,255,0)}}
+  .ai-status .t{font-size:11px;color:var(--ai);font-weight:600}
+  .ai-status .v{font-family:var(--f-mono);font-size:11px;color:var(--tx-2)}
+
+  .presence{display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 6px;border-radius:8px}
+  .presence:hover{background:var(--card)}
+  .presence .status-dot{width:9px;height:9px;border-radius:50%;background:var(--validated);box-shadow:0 0 0 3px var(--validated-bg)}
+  .presence.away .status-dot{background:var(--pending);box-shadow:0 0 0 3px var(--pending-bg)}
+  .presence .who{line-height:1.15}
+  .presence .who b{font-size:12px;font-weight:600;display:block}
+  .presence .who small{font-size:9.5px;color:var(--tx-3);font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.08em}
+  .avatar{
+    width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    font-family:var(--f-display);font-weight:600;font-size:12px;color:#fff;
+    background:linear-gradient(135deg,#3a6fb0,#6a4ca3);
+  }
+
+  /* ---------- main grid ---------- */
+  .main{
+    display:grid;
+    grid-template-columns:282px 1fr 360px;
+    min-height:0;
+    overflow:hidden;
+  }
+  .col{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .col.queue{border-right:1px solid var(--line);background:var(--panel)}
+  .col.center{background:var(--bg)}
+  .col.copilot{border-left:1px solid var(--line);background:var(--panel)}
+
+  .col-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 14px 10px;border-bottom:1px solid var(--line-soft);
+  }
+  .col-head h2{font-family:var(--f-display);font-size:13px;font-weight:600;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
+  .count-chip{font-family:var(--f-mono);font-size:10px;background:var(--card);border:1px solid var(--line);padding:1px 7px;border-radius:20px;color:var(--tx-2)}
+
+  /* ---------- channel filter ---------- */
+  .channel-filter{display:flex;gap:5px;padding:10px 12px;border-bottom:1px solid var(--line-soft)}
+  .chan-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:8px 4px;border-radius:8px;background:var(--card);border:1px solid var(--line);
+    transition:.15s;
+  }
+  .chan-btn:hover{background:var(--card-hi)}
+  .chan-btn.on{background:var(--ai-bg);border-color:rgba(77,163,255,.4)}
+  .chan-btn svg{width:16px;height:16px;stroke:var(--tx-2);fill:none;stroke-width:1.7}
+  .chan-btn.on svg{stroke:var(--ai)}
+  .chan-btn .n{font-family:var(--f-mono);font-size:11px;font-weight:600}
+  .chan-btn .l{font-size:8.5px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.08em}
+
+  /* ---------- queue list ---------- */
+  .queue-list{overflow-y:auto;flex:1;padding:8px}
+  .qitem{
+    position:relative;padding:11px 12px 11px 14px;border-radius:var(--radius);
+    background:var(--card);border:1px solid transparent;margin-bottom:7px;cursor:pointer;
+    transition:.14s;
+  }
+  .qitem::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--tx-3)}
+  .qitem[data-chan="call"]::before{background:var(--validated)}
+  .qitem[data-chan="chat"]::before{background:var(--ai)}
+  .qitem[data-chan="email"]::before{background:var(--human)}
+  .qitem:hover{background:var(--card-hi);border-color:var(--line)}
+  .qitem.active{background:var(--card-hi);border-color:var(--ai);box-shadow:0 0 0 1px rgba(77,163,255,.25)}
+  .qitem-top{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .qitem .cname{font-weight:600;font-size:12.5px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qitem .ctime{font-family:var(--f-mono);font-size:10px;color:var(--tx-3)}
+  .qitem .qmeta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .tag{font-family:var(--f-mono);font-size:9px;padding:2px 6px;border-radius:5px;background:var(--panel-2);color:var(--tx-2);letter-spacing:.04em}
+  .tag.live{background:var(--validated-bg);color:var(--validated)}
+  .tag.queued{background:var(--pending-bg);color:var(--pending)}
+  .tag.lob{border:1px solid var(--line)}
+  .qitem .preview{font-size:11px;color:var(--tx-3);margin-top:6px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .sent-mini{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .sent-pos{background:var(--validated)} .sent-neu{background:var(--tx-3)} .sent-neg{background:var(--risk)}
+  .chan-ico{width:14px;height:14px;stroke-width:1.8;fill:none}
+
+  /* ---------- center: customer 360 ---------- */
+  .cust360{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .cust360-top{display:flex;align-items:center;gap:14px}
+  .cust-avatar{
+    width:44px;height:44px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;
+    font-family:var(--f-display);font-weight:600;font-size:16px;color:#fff;
+    background:linear-gradient(135deg,#2f5b8c,#7a4f97);
+  }
+  .cust-id h3{font-family:var(--f-display);font-size:17px;font-weight:600;line-height:1.2}
+  .cust-id .ids{display:flex;gap:10px;margin-top:3px;font-family:var(--f-mono);font-size:10.5px;color:var(--tx-3)}
+  .cust-badges{margin-left:auto;display:flex;gap:8px}
+  .cbadge{
+    text-align:right;padding:6px 11px;border-radius:9px;background:var(--card);border:1px solid var(--line);min-width:78px;
+  }
+  .cbadge .l{font-size:8.5px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.09em;color:var(--tx-3)}
+  .cbadge .v{font-size:13px;font-weight:600;font-family:var(--f-display);margin-top:1px}
+  .cbadge.risk .v{color:var(--risk)} .cbadge.tier .v{color:var(--human)} .cbadge.value .v{color:var(--validated)}
+
+  .cust-strip{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap}
+  .strip-pill{
+    display:flex;align-items:center;gap:7px;font-size:11px;color:var(--tx-2);
+    background:var(--card);border:1px solid var(--line);padding:5px 10px;border-radius:7px;
+  }
+  .strip-pill svg{width:13px;height:13px;stroke:var(--tx-3);fill:none;stroke-width:1.7}
+  .strip-pill b{color:var(--tx);font-weight:600;font-family:var(--f-mono);font-size:11px}
+
+  /* ---------- center: conversation ---------- */
+  .convo-wrap{flex:1;display:flex;flex-direction:column;min-height:0}
+  .convo-head{
+    display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line-soft);
+  }
+  .convo-head .ctitle{font-family:var(--f-display);font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--risk);animation:blink 1.4s infinite}
+  @keyframes blink{50%{opacity:.3}}
+  .call-timer{font-family:var(--f-mono);font-size:12px;color:var(--validated);font-weight:600}
+  .convo-head .right{margin-left:auto;display:flex;gap:7px}
+  .icon-btn{
+    width:30px;height:30px;display:grid;place-items:center;border-radius:8px;
+    background:var(--card);border:1px solid var(--line);transition:.14s;
+  }
+  .icon-btn:hover{background:var(--card-hi);border-color:var(--ai)}
+  .icon-btn svg{width:15px;height:15px;stroke:var(--tx-2);fill:none;stroke-width:1.7}
+  .icon-btn.end{background:var(--risk-bg);border-color:rgba(255,107,122,.4)}
+  .icon-btn.end svg{stroke:var(--risk)}
+
+  .convo-body{flex:1;overflow-y:auto;padding:18px 18px 8px}
+
+  /* live sentiment bar (call) */
+  .sentiment-rail{
+    display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:9px 12px;
+    background:var(--card);border:1px solid var(--line);border-radius:9px;
+  }
+  .sentiment-rail .lab{font-family:var(--f-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--tx-3);white-space:nowrap}
+  .sent-track{flex:1;height:6px;border-radius:6px;background:linear-gradient(90deg,var(--risk),var(--pending),var(--validated));position:relative;opacity:.85}
+  .sent-marker{position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--bg);box-shadow:0 0 0 1px var(--line);transition:left .8s ease}
+  .sent-val{font-family:var(--f-mono);font-size:11px;font-weight:600;color:var(--validated)}
+
+  /* transcript / messages */
+  .turn{display:flex;gap:11px;margin-bottom:15px;max-width:88%}
+  .turn.cust{flex-direction:row}
+  .turn.agent{flex-direction:row-reverse;margin-left:auto}
+  .turn-av{width:28px;height:28px;border-radius:8px;flex-shrink:0;display:grid;place-items:center;font-family:var(--f-mono);font-size:10px;font-weight:600;color:#fff}
+  .turn.cust .turn-av{background:linear-gradient(135deg,#7a4f97,#3f3a7a)}
+  .turn.agent .turn-av{background:linear-gradient(135deg,#2f5b8c,#2a6b6b)}
+  .turn-content{display:flex;flex-direction:column;gap:3px}
+  .turn.agent .turn-content{align-items:flex-end}
+  .turn-meta{display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:9.5px;color:var(--tx-3)}
+  .bubble{padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.5}
+  .turn.cust .bubble{background:var(--card);border:1px solid var(--line);border-top-left-radius:3px}
+  .turn.agent .bubble{background:rgba(47,91,140,.22);border:1px solid rgba(77,163,255,.28);border-top-right-radius:3px}
+  .bubble .pii{background:var(--risk-bg);color:var(--risk);padding:0 4px;border-radius:4px;font-family:var(--f-mono);font-size:11px}
+  .ai-spoke{font-size:9px;color:var(--ai);font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:4px}
+
+  /* email thread view */
+  .email-view{display:none}
+  .email-card{background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px}
+  .email-card .eh{display:flex;align-items:center;gap:11px;padding:13px 15px;border-bottom:1px solid var(--line-soft)}
+  .email-card .eh .turn-av{width:34px;height:34px}
+  .email-card .ef{flex:1}
+  .email-card .ef b{font-size:13px}
+  .email-card .ef .em{font-family:var(--f-mono);font-size:10px;color:var(--tx-3)}
+  .email-card .etime{font-family:var(--f-mono);font-size:10px;color:var(--tx-3)}
+  .email-card .eb{padding:14px 15px;font-size:13px;line-height:1.65;color:var(--tx-2)}
+  .email-card .eb p{margin-bottom:9px}
+  .email-subject{font-family:var(--f-display);font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:9px}
+
+  /* composer */
+  .composer{border-top:1px solid var(--line);background:var(--panel-2);padding:12px 18px}
+  .composer-ai-hint{
+    display:flex;align-items:center;gap:9px;margin-bottom:10px;padding:9px 12px;border-radius:9px;
+    background:var(--ai-bg);border:1px solid rgba(77,163,255,.28);font-size:12px;
+  }
+  .composer-ai-hint .ico{width:24px;height:24px;border-radius:6px;background:rgba(77,163,255,.18);display:grid;place-items:center;flex-shrink:0}
+  .composer-ai-hint .ico svg{width:14px;height:14px;stroke:var(--ai);fill:none;stroke-width:1.8}
+  .composer-ai-hint span{flex:1;color:var(--tx-2)}
+  .composer-ai-hint b{color:var(--ai)}
+  .composer-ai-hint .use{font-family:var(--f-mono);font-size:11px;color:var(--ai);background:rgba(77,163,255,.14);padding:4px 10px;border-radius:6px;border:1px solid rgba(77,163,255,.3)}
+  .composer-ai-hint .use:hover{background:rgba(77,163,255,.24)}
+  .composer-box{display:flex;align-items:flex-end;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+  .composer-box:focus-within{border-color:var(--ai)}
+  .composer-box textarea{flex:1;background:none;border:none;resize:none;color:var(--tx);font-family:var(--f-ui);font-size:13px;line-height:1.5;max-height:90px}
+  .composer-box textarea::placeholder{color:var(--tx-3)}
+  .send-btn{
+    display:flex;align-items:center;gap:7px;background:var(--ai);color:var(--on-accent);font-weight:600;
+    padding:8px 15px;border-radius:8px;font-size:12.5px;flex-shrink:0;transition:.14s;
+  }
+  .send-btn:hover{filter:brightness(1.08)}
+  .send-btn svg{width:14px;height:14px;stroke:var(--on-accent);fill:none;stroke-width:2}
+  .composer-tools{display:flex;gap:6px}
+  .ctool{width:30px;height:30px;border-radius:7px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center}
+  .ctool:hover{border-color:var(--ai)}
+  .ctool svg{width:15px;height:15px;stroke:var(--tx-2);fill:none;stroke-width:1.7}
+
+  /* ---------- right: AI copilot ---------- */
+  .copilot-body{flex:1;overflow-y:auto;padding:12px}
+
+  .ai-card{
+    position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:11px;overflow:hidden;transition:.18s;
+  }
+  .ai-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ai)}
+  .ai-card[data-state="pending"]::before{background:var(--pending)}
+  .ai-card[data-state="validated"]::before{background:var(--validated)}
+  .ai-card[data-state="dismissed"]{opacity:.5}
+  .ai-card[data-state="dismissed"]::before{background:var(--tx-3)}
+  .ai-card[data-state="risk"]::before{background:var(--risk)}
+
+  .ai-card-head{display:flex;align-items:center;gap:8px;padding:11px 13px 9px}
+  .ai-card-head .ic{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex-shrink:0;background:var(--ai-bg)}
+  .ai-card-head .ic svg{width:14px;height:14px;stroke:var(--ai);fill:none;stroke-width:1.8}
+  .ai-card[data-state="risk"] .ic{background:var(--risk-bg)}
+  .ai-card[data-state="risk"] .ic svg{stroke:var(--risk)}
+  .ai-card-head .tt{flex:1}
+  .ai-card-head .tt h4{font-size:12px;font-weight:600;font-family:var(--f-display);letter-spacing:.01em}
+  .ai-card-head .tt .src{font-family:var(--f-mono);font-size:9px;color:var(--tx-3);letter-spacing:.04em}
+
+  .confidence{display:flex;align-items:center;gap:6px}
+  .conf-bar{width:38px;height:4px;border-radius:4px;background:var(--panel);overflow:hidden}
+  .conf-fill{height:100%;background:var(--ai);border-radius:4px}
+  .conf-val{font-family:var(--f-mono);font-size:10px;font-weight:600;color:var(--ai)}
+
+  .ai-card-body{padding:0 13px 11px;font-size:12.5px;line-height:1.55;color:var(--tx-2)}
+  .ai-card-body strong{color:var(--tx);font-weight:600}
+  .grounded{margin-top:9px;display:flex;flex-wrap:wrap;gap:5px}
+  .source-chip{
+    font-family:var(--f-mono);font-size:9.5px;display:flex;align-items:center;gap:4px;
+    background:var(--panel);border:1px solid var(--line);padding:3px 7px;border-radius:5px;color:var(--tx-3);
+  }
+  .source-chip svg{width:10px;height:10px;stroke:var(--tx-3);fill:none;stroke-width:1.8}
+  .source-chip:hover{color:var(--ai);border-color:rgba(77,163,255,.4)}
+
+  .nba-steps{list-style:none;margin-top:6px}
+  .nba-steps li{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12px}
+  .nba-steps li .num{width:18px;height:18px;border-radius:50%;background:var(--ai-bg);color:var(--ai);font-family:var(--f-mono);font-size:10px;font-weight:600;display:grid;place-items:center;flex-shrink:0}
+
+  .reply-draft{
+    background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:10px;
+    font-size:12.5px;line-height:1.55;color:var(--tx);margin-top:4px;
+  }
+  .reply-draft[contenteditable="true"]{outline:none;border-color:var(--ai);border-style:solid;background:var(--bg)}
+
+  /* validation control — the signature interaction */
+  .validate{
+    display:flex;align-items:center;gap:7px;padding:9px 13px;border-top:1px solid var(--line-soft);
+    background:rgba(245,183,61,.045);
+  }
+  .ai-card[data-state="validated"] .validate{background:var(--validated-bg)}
+  .ai-card[data-state="dismissed"] .validate{background:transparent}
+  .v-state{
+    font-family:var(--f-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;
+    display:flex;align-items:center;gap:5px;color:var(--pending);font-weight:600;margin-right:auto;
+  }
+  .v-state .vd{width:6px;height:6px;border-radius:50%;background:var(--pending)}
+  .ai-card[data-state="validated"] .v-state{color:var(--validated)}
+  .ai-card[data-state="validated"] .v-state .vd{background:var(--validated)}
+  .ai-card[data-state="dismissed"] .v-state{color:var(--tx-3)}
+  .ai-card[data-state="dismissed"] .v-state .vd{background:var(--tx-3)}
+  .vbtn{
+    display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:7px;
+    border:1px solid var(--line);background:var(--panel);transition:.13s;
+  }
+  .vbtn svg{width:12px;height:12px;fill:none;stroke-width:2}
+  .vbtn.approve{color:var(--validated);border-color:rgba(67,214,147,.35)}
+  .vbtn.approve svg{stroke:var(--validated)}
+  .vbtn.approve:hover{background:var(--validated-bg)}
+  .vbtn.edit{color:var(--ai);border-color:rgba(77,163,255,.3)}
+  .vbtn.edit svg{stroke:var(--ai)}
+  .vbtn.edit:hover{background:var(--ai-bg)}
+  .vbtn.dismiss{color:var(--tx-3)}
+  .vbtn.dismiss svg{stroke:var(--tx-3)}
+  .vbtn.dismiss:hover{background:var(--panel-2);color:var(--tx-2)}
+
+  .copilot-foot{
+    padding:10px 13px;border-top:1px solid var(--line);background:var(--panel-2);
+    display:flex;align-items:center;gap:9px;font-size:11px;color:var(--tx-3);font-family:var(--f-mono)
+  }
+  .copilot-foot b{color:var(--validated)}
+
+  /* ---------- bottom: back office / AI agent dock ---------- */
+  .dock{
+    border-top:1px solid var(--line);background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    display:flex;flex-direction:column;z-index:20;
+  }
+  .dock-head{display:flex;align-items:center;gap:14px;padding:9px 18px 0}
+  .dock-head h2{font-family:var(--f-display);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .dock-head .desc{font-size:11px;color:var(--tx-3)}
+  .dock-tabs{display:flex;gap:4px;margin-left:auto}
+  .dock-tab{font-family:var(--f-mono);font-size:11px;padding:4px 11px;border-radius:7px;color:var(--tx-3);border:1px solid transparent}
+  .dock-tab.on{color:var(--tx);background:var(--card);border-color:var(--line)}
+
+  .agent-rail{display:flex;gap:10px;padding:11px 18px 14px;overflow-x:auto}
+  .agent-card{
+    flex-shrink:0;width:208px;background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:11px 12px;transition:.15s;position:relative;overflow:hidden;
+  }
+  .agent-card:hover{border-color:rgba(77,163,255,.4);background:var(--card-hi)}
+  .agent-card .ac-top{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .agent-card .ac-ic{width:30px;height:30px;border-radius:8px;background:var(--ai-bg);display:grid;place-items:center;flex-shrink:0}
+  .agent-card .ac-ic svg{width:16px;height:16px;stroke:var(--ai);fill:none;stroke-width:1.7}
+  .agent-card h4{font-size:12.5px;font-weight:600;font-family:var(--f-display);line-height:1.2}
+  .agent-card .ac-lob{font-family:var(--f-mono);font-size:9px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.06em}
+  .agent-card p{font-size:11px;color:var(--tx-3);line-height:1.45;margin-bottom:10px;min-height:30px}
+  .agent-card .activate{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:6px;
+    font-size:11.5px;font-weight:600;padding:7px;border-radius:7px;
+    background:var(--ai);color:var(--on-accent);transition:.14s;
+  }
+  .agent-card .activate:hover{filter:brightness(1.08)}
+  .agent-card .activate svg{width:13px;height:13px;stroke:var(--on-accent);fill:none;stroke-width:2}
+  .agent-card.running .activate{background:var(--pending-bg);color:var(--pending);border:1px solid rgba(245,183,61,.4)}
+  .agent-card.running .activate svg{stroke:var(--pending);animation:spin 1s linear infinite}
+  .agent-card.done .activate{background:var(--validated-bg);color:var(--validated);border:1px solid rgba(67,214,147,.4)}
+  .agent-card.done .activate svg{stroke:var(--validated)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .agent-card .ac-status{font-family:var(--f-mono);font-size:9px;position:absolute;top:11px;right:12px;color:var(--tx-3)}
+  .agent-card.running .ac-status{color:var(--pending)}
+  .agent-card.done .ac-status{color:var(--validated)}
+
+  /* ---------- task validation modal ---------- */
+  .modal-scrim{
+    position:fixed;inset:0;background:rgba(6,10,18,.7);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:100;
+  }
+  .modal-scrim.show{display:flex}
+  .modal{
+    width:460px;max-width:92vw;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;box-shadow:var(--shadow);overflow:hidden;
+    animation:rise .2s ease;
+  }
+  @keyframes rise{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal-head{display:flex;align-items:center;gap:11px;padding:15px 17px;border-bottom:1px solid var(--line)}
+  .modal-head .mh-ic{width:34px;height:34px;border-radius:9px;background:var(--ai-bg);display:grid;place-items:center}
+  .modal-head .mh-ic svg{width:18px;height:18px;stroke:var(--ai);fill:none;stroke-width:1.7}
+  .modal-head h3{font-family:var(--f-display);font-size:15px;font-weight:600}
+  .modal-head .mh-sub{font-family:var(--f-mono);font-size:10px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.07em}
+  .modal-head .mclose{margin-left:auto;width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--tx-3)}
+  .modal-head .mclose:hover{background:var(--card);color:var(--tx)}
+  .modal-body{padding:16px 17px}
+  .task-prog{list-style:none;margin-bottom:16px}
+  .task-prog li{display:flex;align-items:flex-start;gap:11px;padding-bottom:13px;position:relative}
+  .task-prog li:not(:last-child)::before{content:"";position:absolute;left:11px;top:22px;bottom:-2px;width:1.5px;background:var(--line)}
+  .task-prog li .tp-dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;background:var(--card);border:1.5px solid var(--line);font-family:var(--f-mono);font-size:10px;color:var(--tx-3);z-index:1}
+  .task-prog li.done .tp-dot{background:var(--validated-bg);border-color:var(--validated)}
+  .task-prog li.done .tp-dot svg{width:11px;height:11px;stroke:var(--validated);fill:none;stroke-width:2.4}
+  .task-prog li.active .tp-dot{border-color:var(--ai);color:var(--ai)}
+  .task-prog li .tp-txt b{font-size:12.5px;font-weight:600;display:block}
+  .task-prog li .tp-txt span{font-size:11px;color:var(--tx-3);font-family:var(--f-mono)}
+  .task-prog li.done .tp-txt b{color:var(--tx)}
+  .task-prog li.pending .tp-txt b{color:var(--tx-3)}
+
+  .task-summary{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px;margin-bottom:6px}
+  .task-summary .ts-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--line-soft)}
+  .task-summary .ts-row:last-child{border:none}
+  .task-summary .ts-row .k{color:var(--tx-3)}
+  .task-summary .ts-row .v{font-family:var(--f-mono);font-weight:600}
+  .gate-note{display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-size:11.5px;color:var(--pending);background:var(--pending-bg);border:1px solid rgba(245,183,61,.3);padding:9px 11px;border-radius:8px;line-height:1.5}
+  .gate-note svg{width:15px;height:15px;stroke:var(--pending);fill:none;stroke-width:1.8;flex-shrink:0;margin-top:1px}
+  .modal-foot{display:flex;gap:9px;padding:13px 17px;border-top:1px solid var(--line);background:var(--panel-2)}
+  .modal-foot button{flex:1;padding:10px;border-radius:9px;font-size:12.5px;font-weight:600}
+  .mf-cancel{background:var(--card);border:1px solid var(--line);color:var(--tx-2)}
+  .mf-cancel:hover{background:var(--card-hi)}
+  .mf-approve{background:var(--validated);color:var(--on-accent);display:flex;align-items:center;justify-content:center;gap:7px}
+  .mf-approve svg{width:15px;height:15px;stroke:var(--on-accent);fill:none;stroke-width:2.2}
+  .mf-approve:hover{filter:brightness(1.08)}
+  .mf-approve:disabled{opacity:.4;cursor:not-allowed}
+
+  /* toast */
+  .toast-wrap{position:fixed;bottom:128px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .toast{
+    display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);
+    padding:11px 16px;border-radius:10px;box-shadow:var(--shadow);font-size:12.5px;
+    animation:toastin .25s ease;
+  }
+  .toast .ti{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;flex-shrink:0}
+  .toast.ok .ti{background:var(--validated-bg)} .toast.ok .ti svg{stroke:var(--validated)}
+  .toast.ai .ti{background:var(--ai-bg)} .toast.ai .ti svg{stroke:var(--ai)}
+  .toast .ti svg{width:13px;height:13px;fill:none;stroke-width:2.2}
+  @keyframes toastin{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  .reduced *{animation:none!important;transition:none!important}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* responsive */
+  @media (max-width:1180px){
+    .main{grid-template-columns:240px 1fr 320px}
+  }
+  @media (max-width:920px){
+    .app{grid-template-rows:54px 1fr 116px}
+    .main{grid-template-columns:1fr;position:relative}
+    .col.queue,.col.copilot{position:absolute;inset:0;z-index:5;display:none}
+    .col.queue.show,.col.copilot.show{display:flex}
+    .search,.lob-context{display:none}
+    .mobile-nav{display:flex!important}
+  }
+  .mobile-nav{display:none;position:fixed;bottom:128px;left:12px;right:12px;z-index:40;gap:7px;justify-content:center}
+  .mobile-nav button{flex:1;max-width:140px;font-family:var(--f-mono);font-size:11px;padding:8px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);color:var(--tx-2)}
+  .mobile-nav button.on{color:var(--ai);border-color:var(--ai)}
+
+  /* ---------- channel mode bar + concurrent (3:1) chat tabs ---------- */
+  .channel-bar{display:flex;align-items:center;gap:12px;padding:9px 18px;border-bottom:1px solid var(--line);background:var(--panel-2);min-height:46px}
+  .cb-left{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .mode-badge{display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:11px;font-weight:600;padding:5px 10px;border-radius:7px;border:1px solid var(--line)}
+  .mode-badge svg{width:13px;height:13px;fill:none;stroke-width:1.9}
+  .mode-badge .ratio{font-family:var(--f-display);font-size:13px;font-weight:700}
+  .mode-call{color:var(--validated);background:var(--validated-bg);border-color:rgba(67,214,147,.32)}
+  .mode-call svg{stroke:var(--validated)}
+  .mode-chat{color:var(--ai);background:var(--ai-bg);border-color:rgba(77,163,255,.32)}
+  .mode-chat svg{stroke:var(--ai)}
+  .mode-email{color:var(--human);background:var(--human-bg);border-color:rgba(183,155,255,.32)}
+  .mode-email svg{stroke:var(--human)}
+  .mode-omni{color:var(--tx-2);background:var(--card)}
+  .mode-omni svg{stroke:var(--tx-2)}
+  .cb-hint{font-size:11.5px;color:var(--tx-3)}
+  .cb-hint b{color:var(--tx-2);font-weight:600}
+  .cc-tabs{display:flex;gap:7px;margin-left:auto;overflow-x:auto;padding-bottom:1px}
+  .cc-tab{position:relative;display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:9px;background:var(--card);border:1px solid var(--line);cursor:pointer;transition:.13s;flex-shrink:0}
+  .cc-tab:hover{background:var(--card-hi)}
+  .cc-tab.active{border-color:var(--ai);background:var(--ai-bg)}
+  .cc-tab .sd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .cc-tab .nm{font-size:11.5px;font-weight:600;white-space:nowrap}
+  .cc-tab .cc-lob{font-family:var(--f-mono);font-size:8.5px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.05em}
+  .cc-tab .tmr{font-family:var(--f-mono);font-size:10px;color:var(--tx-3)}
+  .cc-tab .wait-badge{font-family:var(--f-mono);font-size:9px;font-weight:600;color:var(--pending);background:var(--pending-bg);border:1px solid rgba(245,183,61,.35);padding:1px 6px;border-radius:20px;display:flex;align-items:center;gap:4px}
+  .cc-tab .wait-badge .wd{width:5px;height:5px;border-radius:50%;background:var(--pending);animation:blink 1.3s infinite}
+
+  /* ---------- AI feedback (training loop) ---------- */
+  .ai-meta{display:flex;align-items:center;gap:9px;padding:8px 13px;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+  .fb{display:flex;align-items:center;gap:6px}
+  .fb-q{font-family:var(--f-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-3)}
+  .fb-btn{width:26px;height:24px;display:grid;place-items:center;border-radius:6px;border:1px solid var(--line);background:var(--panel);transition:.13s}
+  .fb-btn svg{width:13px;height:13px;fill:none;stroke:var(--tx-3);stroke-width:1.8}
+  .fb-btn:hover{border-color:var(--ai)}
+  .fb-btn.up.on{background:var(--validated-bg);border-color:rgba(67,214,147,.4)}
+  .fb-btn.up.on svg{stroke:var(--validated);fill:var(--validated)}
+  .fb-btn.down.on{background:var(--risk-bg);border-color:rgba(255,107,122,.4)}
+  .fb-btn.down.on svg{stroke:var(--risk);fill:var(--risk)}
+  .ss-btn{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--human);background:var(--human-bg);border:1px solid rgba(183,155,255,.3);padding:5px 10px;border-radius:7px;transition:.13s}
+  .ss-btn svg{width:13px;height:13px;fill:none;stroke:var(--human);stroke-width:1.8}
+  .ss-btn:hover{filter:brightness(1.12)}
+  .fb-reasons{display:none;width:100%;gap:5px;flex-wrap:wrap;margin-top:2px}
+  .fb-reasons.show{display:flex}
+  .fb-chip{font-family:var(--f-mono);font-size:10px;color:var(--tx-2);background:var(--panel);border:1px solid var(--line);padding:3px 8px;border-radius:6px}
+  .fb-chip:hover{border-color:var(--risk);color:var(--risk)}
+  .fb-done{font-size:10.5px;color:var(--validated);font-family:var(--f-mono);display:flex;align-items:center;gap:5px}
+  .fb-done svg{width:12px;height:12px;stroke:var(--validated);fill:none;stroke-width:2.2}
+
+  .copilot-foot{flex-wrap:wrap}
+  .foot-stats{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--tx-3);display:flex;gap:10px;align-items:center}
+  .foot-stats span{display:flex;align-items:center;gap:4px}
+  .foot-stats svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8}
+  .foot-stats b{color:var(--ai)}
+  .foot-stats .ss b{color:var(--human)}
+
+  /* self-serve modal extras */
+  .ss-article{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:11px 12px;font-size:12.5px;line-height:1.55;color:var(--tx);margin-bottom:13px}
+  .ss-article[contenteditable="true"]{border-color:var(--human);outline:none}
+  .ss-article h5{font-family:var(--f-display);font-size:13px;margin-bottom:6px}
+  .ss-label{font-family:var(--f-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--tx-3);margin-bottom:8px;display:block}
+  .ss-channels{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+  .ss-chan{display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:9px;background:var(--card);border:1px solid var(--line);cursor:pointer;font-size:12px;transition:.13s}
+  .ss-chan:hover{border-color:var(--human)}
+  .ss-chan.on{background:var(--human-bg);border-color:rgba(183,155,255,.5)}
+  .ss-chan .box{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--line);display:grid;place-items:center;flex-shrink:0}
+  .ss-chan.on .box{background:var(--human);border-color:var(--human)}
+  .ss-chan.on .box svg{width:11px;height:11px;stroke:var(--on-accent);fill:none;stroke-width:2.6}
+  .ss-chan .box svg{display:none}
+  .ss-chan.on .box svg{display:block}
+  .mf-publish{background:var(--human);color:var(--on-accent);display:flex;align-items:center;justify-content:center;gap:7px}
+  .mf-publish svg{width:15px;height:15px;stroke:var(--on-accent);fill:none;stroke-width:2.2}
+  .mf-publish:hover{filter:brightness(1.08)}
+  .deflect-note{display:flex;gap:9px;align-items:flex-start;margin-top:4px;font-size:11.5px;color:var(--human);background:var(--human-bg);border:1px solid rgba(183,155,255,.3);padding:9px 11px;border-radius:8px;line-height:1.5}
+  .deflect-note svg{width:15px;height:15px;stroke:var(--human);fill:none;stroke-width:1.8;flex-shrink:0;margin-top:1px}
+  .ss-vol{display:flex;gap:9px;margin:2px 0 10px}
+  .ss-stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;text-align:center}
+  .ss-stat .v{font-family:var(--f-display);font-size:16px;font-weight:700;color:var(--human)}
+  .ss-stat .l{font-family:var(--f-mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-3)}
+
+  /* self-serve copilot card accent */
+  .ai-card[data-type="selfserve"]::before{background:var(--human)}
+  .ai-card[data-type="selfserve"] .ic{background:var(--human-bg)}
+  .ai-card[data-type="selfserve"] .ic svg{stroke:var(--human)}
+
+  /* ---------- performance chip (top bar) ---------- */
+  .perf-chip{display:flex;align-items:center;gap:9px;padding:4px 11px 4px 6px;border-radius:9px;background:var(--card);border:1px solid var(--line);transition:.14s}
+  .perf-chip:hover{background:var(--card-hi)}
+  .perf-chip .pc-meta{text-align:left;line-height:1.15}
+  .perf-chip .pc-meta small{display:block;font-family:var(--f-mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx-3)}
+  .perf-chip .pc-meta b{font-family:var(--f-display);font-size:12px;font-weight:600;color:var(--tx)}
+  .ring text{letter-spacing:-.02em}
+  .icon-btn.score{background:var(--validated-bg);border-color:rgba(67,214,147,.35)}
+  .icon-btn.score svg{stroke:var(--validated)}
+  .icon-btn.score:hover{background:rgba(67,214,147,.2)}
+
+  /* ---------- scorecard / performance modal internals ---------- */
+  .sc-overall{display:flex;align-items:center;gap:14px;padding:4px 0 14px;border-bottom:1px solid var(--line-soft);margin-bottom:14px}
+  .sc-overall .sc-band{font-family:var(--f-display);font-size:17px;font-weight:600}
+  .sc-overall .sc-sub{font-size:11.5px;color:var(--tx-3);margin-top:2px;line-height:1.45}
+  .sc-target{margin-left:auto;text-align:right}
+  .sc-target .l{font-family:var(--f-mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--tx-3)}
+  .sc-target .v{font-family:var(--f-display);font-size:14px;font-weight:600}
+  .sc-delta{font-family:var(--f-mono);font-size:11px;font-weight:600}
+  .sc-up{color:var(--validated)} .sc-down{color:var(--risk)}
+
+  .sc-section-label{font-family:var(--f-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx-3);margin:2px 0 6px}
+  .cat-row{display:flex;align-items:center;gap:11px;padding:6px 0}
+  .cat-row .ci{width:24px;height:24px;border-radius:7px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;flex-shrink:0}
+  .cat-row .ci svg{width:13px;height:13px;stroke:var(--tx-2);fill:none;stroke-width:1.8}
+  .cat-row .cn{flex:1;font-size:12.5px}
+  .cat-row .ctrack{width:96px;height:6px;border-radius:6px;background:var(--panel);overflow:hidden;flex-shrink:0}
+  .cat-row .cfill{height:100%;border-radius:6px}
+  .cat-row .cv{font-family:var(--f-mono);font-size:11px;font-weight:600;width:26px;text-align:right;flex-shrink:0}
+
+  .sc-moments{margin:6px 0 4px}
+  .moment{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+  .moment:last-child{border:none}
+  .moment .mk{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;flex-shrink:0}
+  .moment.pos .mk{background:var(--validated-bg)} .moment.pos .mk svg{stroke:var(--validated)}
+  .moment.coach .mk{background:var(--pending-bg)} .moment.coach .mk svg{stroke:var(--pending)}
+  .moment .mk svg{width:12px;height:12px;fill:none;stroke-width:2.2}
+  .moment .mc{flex:1}
+  .moment .mc .mt{font-family:var(--f-mono);font-size:9.5px;color:var(--tx-3);margin-bottom:1px}
+  .moment .mc p{font-size:12px;line-height:1.45;color:var(--tx-2)}
+
+  .sc-coach{display:flex;gap:10px;align-items:flex-start;margin-top:13px;padding:11px 12px;border-radius:9px;background:var(--ai-bg);border:1px solid rgba(77,163,255,.28)}
+  .sc-coach .cco{width:26px;height:26px;border-radius:7px;background:rgba(77,163,255,.18);display:grid;place-items:center;flex-shrink:0}
+  .sc-coach .cco svg{width:15px;height:15px;stroke:var(--ai);fill:none;stroke-width:1.8}
+  .sc-coach .ctx{font-size:12px;line-height:1.5;color:var(--tx)}
+  .sc-coach .ctx .learn{margin-top:7px;font-family:var(--f-mono);font-size:10.5px;color:var(--ai);background:rgba(77,163,255,.14);border:1px solid rgba(77,163,255,.3);padding:4px 9px;border-radius:6px}
+  .sc-coach .ctx .learn:hover{background:rgba(77,163,255,.24)}
+
+  .mf-review{background:var(--card);border:1px solid var(--line);color:var(--tx-2)}
+  .mf-review:hover{background:var(--card-hi)}
+
+  /* performance trend + scored list */
+  .trend-bars{display:flex;align-items:flex-end;gap:7px;height:60px;margin:4px 0 16px}
+  .tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+  .tb .bar{width:100%;border-radius:4px 4px 0 0;min-height:4px}
+  .tb .bl{font-family:var(--f-mono);font-size:8.5px;color:var(--tx-3)}
+  .sc-list .sr{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;cursor:pointer;transition:.13s}
+  .sc-list .sr:hover{background:var(--card-hi);border-color:var(--ai)}
+  .sc-list .sr .si{width:14px;height:14px;stroke:var(--tx-3);fill:none;stroke-width:1.8;flex-shrink:0}
+  .sc-list .sr .sn{flex:1;font-size:12.5px;font-weight:600}
+  .sc-list .sr .slob{font-family:var(--f-mono);font-size:9px;color:var(--tx-3);text-transform:uppercase}
+  .sc-list .sr .spill{font-family:var(--f-mono);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+
+  /* ---------- in-call consult window (supervisor / AI assist) ---------- */
+  .help-launcher{position:fixed;right:18px;bottom:130px;z-index:60;display:flex;align-items:center;gap:9px;padding:10px 15px;border-radius:30px;background:var(--ai);color:var(--on-accent);font-weight:600;font-size:12.5px;box-shadow:var(--shadow);border:none}
+  .help-launcher svg{width:16px;height:16px;stroke:var(--on-accent);fill:none;stroke-width:2}
+  .help-launcher .hl-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:20px;background:var(--risk);color:#fff;font-size:10px;font-family:var(--f-mono);font-weight:600;display:none;place-items:center;border:2px solid var(--bg)}
+  .help-launcher.hidden{display:none}
+  .help-win{position:fixed;right:18px;bottom:130px;z-index:61;width:350px;max-width:calc(100vw - 36px);height:468px;max-height:calc(100vh - 170px);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);display:none;flex-direction:column;overflow:hidden}
+  .help-win.open{display:flex;animation:rise .18s ease}
+  .help-head{display:flex;align-items:center;gap:10px;padding:12px 13px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .help-head .hh-ic{width:30px;height:30px;border-radius:8px;background:var(--ai-bg);display:grid;place-items:center}
+  .help-head .hh-ic svg{width:16px;height:16px;stroke:var(--ai);fill:none;stroke-width:1.8}
+  .help-head h3{font-family:var(--f-display);font-size:14px;font-weight:600;line-height:1.1}
+  .help-head .hh-sub{font-family:var(--f-mono);font-size:8.5px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.06em}
+  .help-head .hclose{margin-left:auto;width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--tx-3)}
+  .help-head .hclose svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+  .help-head .hclose:hover{background:var(--card);color:var(--tx)}
+  .help-tabs{display:flex;gap:6px;padding:10px 12px 0}
+  .help-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11.5px;font-weight:600;padding:8px;border-radius:8px;background:var(--card);border:1px solid var(--line);color:var(--tx-2)}
+  .help-tab svg{width:13px;height:13px;fill:none;stroke:var(--tx-3);stroke-width:1.8}
+  .help-tab.on{background:var(--ai-bg);border-color:rgba(77,163,255,.4);color:var(--ai)}
+  .help-tab.on svg{stroke:var(--ai)}
+  .help-context{margin:10px 12px 0;padding:6px 10px;border-radius:7px;background:var(--card);border:1px solid var(--line);font-size:10.5px;color:var(--tx-3);display:flex;align-items:center;gap:7px}
+  .help-context svg{width:12px;height:12px;stroke:var(--tx-3);fill:none;stroke-width:1.8;flex-shrink:0}
+  .help-context b{color:var(--tx-2);font-weight:600}
+  .help-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+  .hmsg{display:flex;gap:8px;max-width:88%}
+  .hmsg.me{flex-direction:row-reverse;margin-left:auto}
+  .hmsg .hav{width:24px;height:24px;border-radius:7px;flex-shrink:0;display:grid;place-items:center;font-family:var(--f-mono);font-size:9px;font-weight:600;color:#fff}
+  .hmsg.them .hav{background:linear-gradient(135deg,#2f5b8c,#2a6b6b)}
+  .hmsg.sup .hav{background:linear-gradient(135deg,#7a4f97,#3f3a7a)}
+  .hmsg.me .hav{background:linear-gradient(135deg,#2f5b8c,#6a4ca3)}
+  .hmsg .hname{font-family:var(--f-mono);font-size:8.5px;color:var(--tx-3);margin-bottom:2px}
+  .hmsg .hb{padding:8px 11px;border-radius:11px;font-size:12px;line-height:1.5;color:var(--tx)}
+  .hmsg.them .hb,.hmsg.sup .hb{background:var(--card);border:1px solid var(--line);border-top-left-radius:3px}
+  .hmsg.me .hb{background:rgba(47,91,140,.22);border:1px solid rgba(77,163,255,.28);border-top-right-radius:3px}
+  .typing{display:flex;gap:4px;align-items:center;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:11px;width:fit-content}
+  .typing i{width:5px;height:5px;border-radius:50%;background:var(--tx-3);animation:tp 1s infinite}
+  .typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+  @keyframes tp{0%,60%,100%{opacity:.3}30%{opacity:1}}
+  .help-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--panel-2)}
+  .help-input input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 11px;color:var(--tx);font-family:var(--f-ui);font-size:12.5px}
+  .help-input input::placeholder{color:var(--tx-3)}
+  .help-input input:focus{border-color:var(--ai);outline:none}
+  .help-input button{width:38px;height:38px;border-radius:8px;background:var(--ai);display:grid;place-items:center;flex-shrink:0}
+  .help-input button svg{width:15px;height:15px;stroke:var(--on-accent);fill:none;stroke-width:2}
+  @media (max-width:920px){ .help-launcher,.help-win{bottom:184px} }
+
+  /* ---------- draggable consult widget ---------- */
+  .help-launcher{cursor:grab;user-select:none;touch-action:none}
+  .help-head{cursor:grab;user-select:none;touch-action:none}
+  .help-launcher:active,.help-head:active{cursor:grabbing}
+  .help-head .hclose{cursor:pointer}
+
+  /* ---------- preferences panel ---------- */
+  .pref-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .pref-row .pl{flex:1}
+  .pref-row .pl b{font-size:12.5px;font-weight:600;display:block}
+  .pref-row .pl small{font-size:10.5px;color:var(--tx-3)}
+  .switch{width:38px;height:22px;border-radius:20px;background:var(--card);border:1px solid var(--line);position:relative;flex-shrink:0;transition:.15s}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--tx-3);transition:.15s}
+  .switch.on{background:var(--ai-bg);border-color:rgba(77,163,255,.5)}
+  .switch.on::after{left:18px;background:var(--ai)}
+  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-shrink:0}
+  .seg-btn{font-size:11px;font-weight:600;padding:6px 11px;color:var(--tx-2);border-right:1px solid var(--line)}
+  .seg-btn:last-child{border-right:none}
+  .seg-btn.on{background:var(--ai-bg);color:var(--ai)}
+  .pref-chips{display:flex;flex-wrap:wrap;gap:7px;margin:2px 0 4px}
+  .pref-chip{font-size:11px;font-weight:600;padding:6px 11px;border-radius:7px;background:var(--card);border:1px solid var(--line);color:var(--tx-3);display:inline-flex;align-items:center;gap:5px}
+  .pref-chip svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8}
+  .pref-chip.on{background:var(--ai-bg);border-color:rgba(77,163,255,.4);color:var(--ai)}
+  .pref-chip.locked{opacity:.8;color:var(--validated);border-color:rgba(67,214,147,.3);cursor:default}
+  .pref-swatches{display:flex;gap:8px;margin:2px 0 4px;flex-wrap:wrap}
+  .pswatch{width:78px;height:48px;border-radius:8px;border:1.5px solid var(--line);display:flex;align-items:flex-end;gap:3px;padding:6px;position:relative;overflow:hidden}
+  .pswatch span{width:13px;height:13px;border-radius:3px;display:block}
+  .pswatch small{position:absolute;top:5px;left:7px;font-size:9px;color:#fff;font-family:var(--f-mono);opacity:.85}
+  .pswatch.on{border-color:var(--ai);box-shadow:0 0 0 2px rgba(77,163,255,.3)}
+  .slider-wrap{display:flex;align-items:center;gap:9px;flex-shrink:0}
+  .slider-wrap input[type=range]{width:118px;accent-color:var(--ai)}
+  .slider-wrap span{font-family:var(--f-mono);font-size:11px;color:var(--ai);width:36px;text-align:right}
+
+  /* ---------- compact density ---------- */
+  .compact .ai-card{margin-bottom:8px}
+  .compact .ai-card-body{padding-bottom:9px}
+  .compact .copilot-body{padding:9px}
+  .compact .queue-list{padding:7px}
+  .compact .qitem{padding:9px 11px;margin-bottom:6px}
+  .compact .agent-card{padding:9px 10px}
+  .compact .cust360{padding:11px 18px}
+
+  /* ---------- AI context memory ---------- */
+  .pref-textarea{width:100%;min-height:62px;resize:vertical;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;color:var(--tx);font-family:var(--f-ui);font-size:12.5px;line-height:1.5;margin-bottom:10px}
+  .pref-textarea:focus{outline:none;border-color:var(--ai)}
+  .pref-textarea::placeholder{color:var(--tx-3)}
+  .mem-list{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px}
+  .mem-chip{display:inline-flex;align-items:center;gap:6px;background:var(--ai-bg);border:1px solid rgba(77,163,255,.3);color:var(--tx);font-size:11.5px;padding:5px 5px 5px 9px;border-radius:7px}
+  .mem-chip > svg{width:12px;height:12px;fill:none;stroke:var(--ai);stroke-width:1.8}
+  .mem-chip button{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;color:var(--tx-3);background:none;border:none}
+  .mem-chip button svg{stroke:currentColor;fill:none;width:11px;height:11px;stroke-width:2}
+  .mem-chip button:hover{background:var(--risk-bg);color:var(--risk)}
+  .mem-empty{font-size:11px;color:var(--tx-3)}
+  .mem-add{display:flex;gap:8px}
+  .mem-add input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 11px;color:var(--tx);font-family:var(--f-ui);font-size:12.5px}
+  .mem-add input::placeholder{color:var(--tx-3)}
+  .mem-add input:focus{outline:none;border-color:var(--ai)}
+  .mem-add button{width:38px;border-radius:8px;background:var(--ai);display:grid;place-items:center;border:none}
+  .mem-add button svg{width:15px;height:15px;stroke:var(--on-accent);fill:none;stroke-width:2.4}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===================== TOP COMMAND BAR ===================== -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark"><span>C</span></div>
+      <div>
+        <h1>Uniphore</h1>
+        <div class="sub">Agent Desktop</div>
+      </div>
+    </div>
+
+    <div class="lob-context">
+      <span class="label">LOB</span>
+      <button class="lob-pill" id="lobPill"><span class="dot"></span> Cards &amp; Payments</button>
+    </div>
+
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input placeholder="Search customer, case, knowledge or transaction…">
+      <kbd>⌘K</kbd>
+    </div>
+
+    <div class="topbar-right">
+      <div class="ai-status">
+        <span class="pulse"></span>
+        <span class="t">Copilot active</span>
+        <span class="v" id="aiStat">37 validated · 4 awaiting you</span>
+      </div>
+      <button class="icon-btn" id="settingsBtn" title="Preferences"><svg viewBox="0 0 24 24" fill="none" stroke="var(--tx-2)" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.88 1.2V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 2.6 14a2 2 0 1 1 0-4h.05A1.7 1.7 0 0 0 4 7a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 2.6h.05A2 2 0 1 1 13 2.6v.05A1.7 1.7 0 0 0 16 4a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 21.4 9v.05a2 2 0 1 1 0 4z"/></svg></button>
+      <button class="perf-chip" id="perfChip" title="Your performance this shift"></button>
+      <div class="presence" id="presence">
+        <span class="status-dot"></span>
+        <div class="who"><b>Parteek_Agent</b><small id="presenceLabel">Available · Omni</small></div>
+        <div class="avatar">PA</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== MAIN 3-COLUMN ===================== -->
+  <div class="main">
+
+    <!-- LEFT: omnichannel queue -->
+    <aside class="col queue">
+      <div class="col-head">
+        <h2>Workspace
+          <span class="count-chip" id="queueCount">8 active</span>
+        </h2>
+      </div>
+      <div class="channel-filter" id="chanFilter">
+        <button class="chan-btn on" data-chan="all">
+          <span class="n">8</span><span class="l">All</span>
+        </button>
+        <button class="chan-btn" data-chan="call">
+          <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2.1z"/></svg>
+          <span class="n">3</span><span class="l">Call</span>
+        </button>
+        <button class="chan-btn" data-chan="chat">
+          <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-1L3 20l1.3-4.5a8.4 8.4 0 0 1-1-4A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
+          <span class="n">3</span><span class="l">Chat</span>
+        </button>
+        <button class="chan-btn" data-chan="email">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          <span class="n">2</span><span class="l">Email</span>
+        </button>
+      </div>
+      <div class="queue-list" id="queueList"></div>
+    </aside>
+
+    <!-- CENTER: active interaction -->
+    <main class="col center">
+      <!-- customer 360 -->
+      <section class="cust360" id="cust360"></section>
+
+      <!-- channel mode + concurrent (3:1) chat tabs -->
+      <div class="channel-bar" id="channelBar"></div>
+
+      <!-- conversation -->
+      <div class="convo-wrap">
+        <div class="convo-head" id="convoHead"></div>
+        <div class="convo-body" id="convoBody"></div>
+        <div class="composer" id="composer"></div>
+      </div>
+    </main>
+
+    <!-- RIGHT: AI copilot -->
+    <aside class="col copilot">
+      <div class="col-head">
+        <h2>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ai)" stroke-width="1.8"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
+          AI Copilot
+        </h2>
+        <span class="count-chip" id="copilotCount">4 to review</span>
+      </div>
+      <div class="copilot-body" id="copilotBody"></div>
+      <div class="copilot-foot">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+        Every output is grounded &amp; <b>SME-validated</b>
+        <span class="foot-stats" id="footStats"></span>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===================== BACK OFFICE / AI AGENT DOCK ===================== -->
+  <footer class="dock">
+    <div class="dock-head">
+      <h2>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ai)" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Back office &amp; AI agents
+      </h2>
+      <span class="desc">Trigger backend work without leaving the conversation — you approve the result</span>
+      <div class="dock-tabs">
+        <button class="dock-tab on">For this case</button>
+        <button class="dock-tab">All agents</button>
+        <button class="dock-tab">Running</button>
+      </div>
+    </div>
+    <div class="agent-rail" id="agentRail"></div>
+  </footer>
+</div>
+
+<!-- mobile column switcher -->
+<div class="mobile-nav" id="mobileNav">
+  <button data-view="queue">Queue</button>
+  <button class="on" data-view="center">Conversation</button>
+  <button data-view="copilot">Copilot</button>
+</div>
+
+<!-- ===================== TASK VALIDATION MODAL ===================== -->
+<div class="modal-scrim" id="modalScrim">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ===================== IN-CALL CONSULT (supervisor / AI assist) ===================== -->
+<button class="help-launcher" id="helpLauncher">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><path d="M4 13a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/><path d="M20 13a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/><path d="M18 19a3 3 0 0 1-3 3h-3"/></svg>
+  Ask for help
+  <span class="hl-badge" id="helpBadge">1</span>
+</button>
+
+<div class="help-win" id="helpWin">
+  <div class="help-head">
+    <div class="hh-ic" id="helpHeadIc"></div>
+    <div><h3 id="helpTitle">AI assist</h3><div class="hh-sub">Private consult · customer can’t see this</div></div>
+    <button class="hclose" id="helpClose"></button>
+  </div>
+  <div class="help-tabs" id="helpTabs">
+    <button class="help-tab on" data-t="ai"></button>
+    <button class="help-tab" data-t="sup"></button>
+  </div>
+  <div class="help-context" id="helpContext"></div>
+  <div class="help-body" id="helpBody"></div>
+  <div class="help-input">
+    <input id="helpInput" placeholder="Type your question…" autocomplete="off">
+    <button id="helpSend"></button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DATA — three live interactions across channels & LOBs
+   ============================================================ */
+const ICONS = {
+  call:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2.1z"/>',
+  chat:'<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-1L3 20l1.3-4.5a8.4 8.4 0 0 1-1-4A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/>',
+  email:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  bolt:'<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>',
+  book:'<path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 0 2 2h12"/>',
+  shield:'<path d="M12 2 4 5v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V5z"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+  check:'<path d="M5 12l4 4L19 7"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  spin:'<path d="M12 3a9 9 0 1 0 9 9"/>',
+  refund:'<path d="M3 7h13a4 4 0 0 1 0 8H9"/><path d="m6 4-3 3 3 3"/>',
+  doc:'<path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>',
+  pin:'<path d="M12 21s7-5.5 7-11a7 7 0 0 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  flag:'<path d="M4 21V4m0 0 8 2 8-2v10l-8 2-8-2"/>',
+  alert:'<path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  trend:'<path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/>',
+  thumbUp:'<path d="M7 22V11M2 13v7a2 2 0 0 0 2 2h13.3a2 2 0 0 0 2-1.6l1.4-7a2 2 0 0 0-2-2.4H14V5a2.5 2.5 0 0 0-2.5-2.5L7 11"/>',
+  thumbDown:'<path d="M17 2v11M22 11V4a2 2 0 0 0-2-2H6.7a2 2 0 0 0-2 1.6l-1.4 7A2 2 0 0 0 5.3 13H10v6a2.5 2.5 0 0 0 2.5 2.5L17 13"/>',
+  broadcast:'<circle cx="12" cy="12" r="2.5"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a9.5 9.5 0 0 1 0 14M5 19A9.5 9.5 0 0 1 5 5"/>',
+  cap:'<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/>',
+  users:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 21a6.5 6.5 0 0 1 13 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 6M21.5 21a6.5 6.5 0 0 0-5-6.3"/>',
+  focus:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+  inbox:'<path d="M3 12h5l2 3h4l2-3h5"/><path d="M5 5h14l3 7v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5z"/>',
+  gauge:'<path d="M12 14l3.5-3.5"/><path d="M4 19a9 9 0 1 1 16 0"/><circle cx="12" cy="14" r="1.4"/>',
+  award:'<circle cx="12" cy="9" r="6"/><path d="M8.5 14 7 22l5-2.6L17 22l-1.5-8"/>',
+  star:'<path d="M12 3l2.6 5.3 5.9.8-4.2 4.1 1 5.8L12 16.9 6.7 19l1-5.8-4.2-4.1 5.9-.8z"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1 .8-1 1.6"/><path d="M12 17h.01"/>',  headset:'<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><path d="M4 13a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/><path d="M20 13a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/><path d="M18 19a3 3 0 0 1-3 3h-3"/>',
+  gear:'<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.88 1.2V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 2.6 14a2 2 0 1 1 0-4h.05A1.7 1.7 0 0 0 4 7a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 2.6h.05A2 2 0 1 1 13 2.6v.05A1.7 1.7 0 0 0 16 4a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 21.4 9v.05a2 2 0 1 1 0 4z"/>',
+};
+function ico(name,cls){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="${cls||''}">${ICONS[name]||''}</svg>`}
+
+const INTERACTIONS = [
+  {
+    id:'i1', channel:'call', lob:'Cards & Payments', live:true, sentiment:'neg', sentVal:-0.42,
+    customer:{name:'Arjun Mehta', initials:'AM', acct:'XXXX-4471', cif:'CIF 88204517', tier:'Priority', risk:'Elevated', value:'₹18.4L', since:'2016', sentiment:'Frustrated'},
+    waited:'05:12', preview:'Disputing a ₹42,000 card transaction he doesn’t recognise',
+    strip:[
+      {ico:'card', label:'Card', val:'Platinum ••4471'},
+      {ico:'flag', label:'Open cases', val:'1 dispute'},
+      {ico:'clock', label:'Last contact', val:'2 days ago'},
+      {ico:'trend', label:'Churn risk', val:'High'}
+    ],
+    transcript:[
+      {who:'cust', t:'00:14', text:'I’m looking at my statement and there’s a charge for forty-two thousand rupees to some merchant I have never heard of.'},
+      {who:'agent', t:'00:27', text:'I understand, that’s concerning. I can see the transaction. Let me confirm a couple of details so I can raise this for you.'},
+      {who:'cust', t:'00:41', text:'It was dated yesterday. My card number ends 4471 and my DOB is the fourteenth of March nineteen eighty-five.', pii:'fourteenth of March nineteen eighty-five'},
+      {who:'agent', t:'00:58', text:'Thank you — verified. I can see the merchant flagged by our fraud model too. I’ll start a dispute and arrange provisional credit while we investigate.', ai:true}
+    ],
+    sentHistory:[-0.1,-0.2,-0.35,-0.42],
+    copilot:[
+      {type:'nba', state:'pending', conf:94, title:'Next best action', src:'Fraud model · Policy CP-22',
+        body:'Transaction <strong>TXN-9F2240 (₹42,000)</strong> matches a known card-not-present fraud pattern. Recommended path:',
+        steps:['Raise dispute under reason code 10.4','Issue provisional credit of ₹42,000','Block & reissue card ••4471']},
+      {type:'reply', state:'pending', conf:88, title:'Suggested talk track', src:'Tone: reassuring · Compliant',
+        reply:'“You’re fully covered under our zero-liability policy. I’m raising the dispute now and crediting ₹42,000 back to your account today while we investigate — you won’t be out of pocket.”'},
+      {type:'risk', state:'risk', conf:99, title:'Compliance watch', src:'Live PII / script monitor',
+        body:'Customer shared <strong>date of birth</strong> aloud. PII auto-masked in the transcript. Identity is verified — <strong>do not</strong> read card or OTP details back over the call.'},
+      {type:'knowledge', state:'pending', conf:91, title:'Grounded answer', src:'Retrieved from backend',
+        body:'Provisional credit for Priority customers posts <strong>same business day</strong>; dispute resolution SLA is <strong>7 working days</strong>. No fee applies.',
+        sources:['Policy CP-22 §4','Core Banking · Acct 4471','Dispute SLA matrix']},
+      {type:'selfserve', state:'pending', conf:86, title:'Self-serve candidate', src:'Deflection model',
+        body:'“Where is my disputed amount / provisional credit?” is a <strong>high-volume, repetitive</strong> query. A guided self-serve flow could deflect it from live channels.',
+        volume:[['1,240','asked / month'],['38%','repeat callers'],['~6 min','avg handle']],
+        targets:['Help Center','In-app chatbot','IVR'],
+        article:'<h5>Track your transaction dispute</h5>You can check the status of a dispute and any provisional credit anytime in the app: <strong>Cards → Transactions → Disputes</strong>. Provisional credit for eligible accounts posts the same business day; final resolution takes up to 7 working days. You’ll get a notification at each stage — no need to call.'}
+    ],
+    agents:[
+      {id:'a1', ico:'flag', name:'Raise dispute case', lob:'Cards', desc:'Open a Reg-E dispute on TXN-9F2240 and attach the fraud model evidence.',
+        steps:['Pull transaction TXN-9F2240','Classify reason code (10.4)','Draft dispute narrative','Attach fraud evidence','Create case in dispute system'],
+        summary:[['Case type','Card fraud · 10.4'],['Disputed amount','₹42,000'],['Provisional credit','₹42,000 (same day)'],['SLA','7 working days'],['Card action','Block & reissue ••4471']]},
+      {id:'a2', ico:'refund', name:'Issue provisional credit', lob:'Cards', desc:'Post a same-day ₹42,000 provisional credit to the disputed account.',
+        steps:['Verify eligibility (Priority)','Calculate credit amount','Stage ledger entry','Post provisional credit'],
+        summary:[['Account','XXXX-4471'],['Credit amount','₹42,000'],['Value date','Today'],['Reversal','On dispute close if denied']]},
+      {id:'a3', ico:'card', name:'Block & reissue card', lob:'Cards', desc:'Hot-list card ••4471 and dispatch a replacement to the address on file.',
+        steps:['Hot-list card ••4471','Confirm delivery address','Generate replacement','Schedule courier'],
+        summary:[['Card','Platinum ••4471'],['Action','Block + reissue'],['Delivery','Priority · 2 days'],['New PIN','Sent separately']]},
+      {id:'a4', ico:'doc', name:'Summarise & dispose', lob:'Omni', desc:'Generate a call summary, disposition code and CRM wrap-up for sign-off.',
+        steps:['Transcribe & summarise','Extract action items','Propose disposition','Draft CRM note'],
+        summary:[['Disposition','Fraud dispute raised'],['Sentiment','Negative → recovered'],['Follow-up','Dispute close in 7d'],['CRM note','Drafted · awaiting you']]}
+    ]
+  },
+  {
+    id:'i2', channel:'chat', lob:'Lending', live:true, sentiment:'neu', sentVal:0.1,
+    customer:{name:'Sneha Kulkarni', initials:'SK', acct:'LN-77310', cif:'CIF 41208866', tier:'Standard', risk:'Low', value:'₹6.2L', since:'2020', sentiment:'Curious'},
+    waited:'01:48', preview:'Asking whether she’s eligible for a top-up on her personal loan',
+    strip:[
+      {ico:'card', label:'Loan', val:'Personal · LN-77310'},
+      {ico:'trend', label:'EMI history', val:'On time · 28/28'},
+      {ico:'clock', label:'Outstanding', val:'₹2.1L'},
+      {ico:'flag', label:'Pre-approved', val:'Yes'}
+    ],
+    messages:[
+      {who:'cust', t:'12:02', text:'Hi, I have a personal loan with you and wanted to know if I can borrow a bit more on top of it?'},
+      {who:'agent', t:'12:03', text:'Hi Sneha! Happy to check that for you. Give me one moment to look at your eligibility.'},
+      {who:'cust', t:'12:03', text:'Thanks! Ideally I need around 3 lakhs for a home renovation.'}
+    ],
+    copilot:[
+      {type:'knowledge', state:'validated', conf:96, title:'Eligibility — backend lookup', src:'Retrieved from credit engine',
+        body:'Sneha is <strong>pre-approved for a top-up of up to ₹4,00,000</strong>. Clean repayment (28/28 on time), bureau score 781. No additional documents required.',
+        sources:['Credit engine · LN-77310','Bureau pull · 781','Top-up policy LP-09']},
+      {type:'nba', state:'pending', conf:90, title:'Next best action', src:'Offer engine',
+        body:'Present the <strong>₹3,00,000 top-up</strong> she asked for at <strong>11.4% p.a.</strong>, tenure 36 months. Indicative EMI:',
+        steps:['Quote ₹3.0L @ 11.4% / 36m','EMI ≈ ₹9,870','Disburse to existing account','e-Sign agreement']},
+      {type:'reply', state:'pending', conf:89, title:'Suggested reply', src:'Tone: warm · Channel: chat',
+        reply:'Good news, Sneha — you’re pre-approved for a top-up of up to ₹4,00,000 🎉 For the ₹3,00,000 you need, that’s about ₹9,870/month over 36 months at 11.4% p.a. Shall I get it ready for you to e-sign?'},
+      {type:'selfserve', state:'pending', conf:83, title:'Self-serve candidate', src:'Deflection model',
+        body:'“Am I eligible for a loan top-up?” is highly repetitive and fully answerable from backend data. Surfacing pre-approved offers in-app would let customers self-serve.',
+        volume:[['910','asked / month'],['52%','pre-approved'],['~5 min','avg handle']],
+        targets:['In-app chatbot','Mobile app','Help Center'],
+        article:'<h5>Check your loan top-up offer</h5>If you have an active personal loan, you may be pre-approved for more. Open the app and go to <strong>Loans → Top-up</strong> to see your eligible amount, indicative EMI and rate instantly — and e-sign to disburse to your account, no documents needed.'}
+    ],
+    agents:[
+      {id:'b1', ico:'refund', name:'Generate top-up offer', lob:'Lending', desc:'Build a binding ₹3,00,000 top-up offer with EMI schedule for e-sign.',
+        steps:['Confirm pre-approval','Price at 11.4% / 36m','Build amortisation schedule','Generate sanction letter'],
+        summary:[['Product','Personal loan top-up'],['Amount','₹3,00,000'],['Rate','11.4% p.a.'],['Tenure','36 months'],['Indicative EMI','₹9,870']]},
+      {id:'b2', ico:'doc', name:'Prepare e-sign packet', lob:'Lending', desc:'Assemble agreement + KFS and send a secure e-sign link to the customer.',
+        steps:['Generate agreement','Attach Key Fact Statement','Create secure e-sign link','Queue for send'],
+        summary:[['Documents','Agreement + KFS'],['Delivery','Secure e-sign link'],['Validity','72 hours'],['Disbursal','On signature']]},
+      {id:'b3', ico:'pin', name:'Update KYC address', lob:'Lending', desc:'Capture and verify a new address against the document on file.',
+        steps:['Capture new address','Match to KYC document','Flag for maker-checker','Stage update'],
+        summary:[['Field','Mailing address'],['Verification','KYC doc match'],['Control','Maker-checker'],['Status','Awaiting you']]},
+      {id:'b4', ico:'doc', name:'Summarise & dispose', lob:'Omni', desc:'Wrap the chat with summary, disposition and next-step reminder.',
+        steps:['Summarise chat','Extract intent','Propose disposition','Draft CRM note'],
+        summary:[['Intent','Loan top-up'],['Outcome','Offer presented'],['Disposition','Lead · hot'],['Follow-up','On e-sign']]}
+    ]
+  },
+  {
+    id:'i3', channel:'email', lob:'Insurance', live:false, sentiment:'neu', sentVal:0.0,
+    customer:{name:'Rohan Desai', initials:'RD', acct:'CLM-55218', cif:'CIF 90551123', tier:'Standard', risk:'Low', value:'₹3.1L', since:'2019', sentiment:'Anxious'},
+    waited:'2h 14m', preview:'Re: Claim status for my motor insurance — any update?',
+    strip:[
+      {ico:'shield', label:'Policy', val:'Motor · MT-44120'},
+      {ico:'flag', label:'Claim', val:'CLM-55218'},
+      {ico:'clock', label:'Filed', val:'9 days ago'},
+      {ico:'trend', label:'Stage', val:'Surveyor done'}
+    ],
+    email:{
+      subject:'Re: Claim status for my motor insurance — any update?',
+      thread:[
+        {who:'cust', name:'Rohan Desai', addr:'rohan.desai@email.com', t:'Today · 09:41',
+          body:'<p>Hello,</p><p>It’s been over a week since I filed claim CLM-55218 for the accident on my car. I submitted all the photos and the FIR. Could you please tell me where things stand and when I can expect the repair to be approved?</p><p>Thanks,<br>Rohan</p>'}
+      ]
+    },
+    copilot:[
+      {type:'knowledge', state:'validated', conf:97, title:'Claim status — backend lookup', src:'Claims system · CLM-55218',
+        body:'Surveyor report <strong>received and approved</strong>. Assessed repair cost <strong>₹86,400</strong>, of which <strong>₹78,900</strong> is payable after ₹7,500 excess. Awaiting garage cashless confirmation.',
+        sources:['Claims · CLM-55218','Surveyor report #SR-2210','Policy MT-44120 §6']},
+      {type:'reply', state:'pending', conf:92, title:'Suggested email reply', src:'Tone: empathetic · Channel: email',
+        reply:'Dear Rohan,<br><br>Thank you for your patience. Good news — the surveyor’s assessment for claim CLM-55218 has been approved. Your repair is sanctioned at ₹78,900 (after the ₹7,500 policy excess). We’re confirming cashless settlement directly with the garage and will share the authorisation within 2 working days.<br><br>Warm regards,<br>Parteek_Agent · Insurance Support'},
+      {type:'nba', state:'pending', conf:87, title:'Next best action', src:'Workflow engine',
+        body:'Reply with the approved status, then <strong>trigger cashless authorisation</strong> to the garage so the customer doesn’t need to pay upfront.',
+        steps:['Send approved-status reply','Trigger cashless auth to garage','Set follow-up reminder · 2 days']}
+    ],
+    agents:[
+      {id:'c1', ico:'shield', name:'Authorise cashless repair', lob:'Insurance', desc:'Send cashless authorisation to the network garage for the approved amount.',
+        steps:['Confirm surveyor approval','Calculate payable (less excess)','Validate garage in network','Issue cashless authorisation'],
+        summary:[['Claim','CLM-55218'],['Approved repair','₹86,400'],['Policy excess','₹7,500'],['Payable to garage','₹78,900'],['Mode','Cashless']]},
+      {id:'c2', ico:'doc', name:'Generate claim letter', lob:'Insurance', desc:'Produce the formal claim approval letter for the customer record.',
+        steps:['Pull claim decision','Populate template','Add settlement breakdown','Stage for dispatch'],
+        summary:[['Document','Claim approval letter'],['Claim','CLM-55218'],['Settlement','₹78,900'],['Delivery','Email + post']]},
+      {id:'c3', ico:'clock', name:'Schedule follow-up', lob:'Omni', desc:'Set a 2-day reminder to confirm garage authorisation landed.',
+        steps:['Create reminder','Link to CLM-55218','Assign to you','Set due date'],
+        summary:[['Task','Confirm cashless auth'],['Due','In 2 working days'],['Owner','Parteek_Agent'],['Linked','CLM-55218']]},
+      {id:'c4', ico:'doc', name:'Summarise & dispose', lob:'Omni', desc:'Close the email interaction with summary and disposition.',
+        steps:['Summarise thread','Extract resolution','Propose disposition','Draft CRM note'],
+        summary:[['Intent','Claim status query'],['Outcome','Approved + informed'],['Disposition','Resolved'],['Follow-up','Auth confirm 2d']]}
+    ]
+  },
+
+  /* ---- additional chat (for 3:1 concurrent) ---- */
+  {
+    id:'i4', channel:'chat', lob:'Cards & Payments', live:true, sentiment:'neg', sentVal:-0.2, awaitingReply:true,
+    customer:{name:'Imran Sheikh', initials:'IS', acct:'XXXX-9920', cif:'CIF 73019845', tier:'Standard', risk:'Low', value:'₹4.8L', since:'2019', sentiment:'Annoyed'},
+    waited:'00:42', preview:'Card declined abroad — wants to know why and how to fix it',
+    strip:[
+      {ico:'card', label:'Card', val:'Signature ••9920'},
+      {ico:'pin', label:'Location', val:'Dubai, AE'},
+      {ico:'flag', label:'Intl usage', val:'Not enabled'},
+      {ico:'clock', label:'Last txn', val:'2 min ago · declined'}
+    ],
+    messages:[
+      {who:'cust', t:'14:21', text:'My card just got declined at a shop here in Dubai, this is really embarrassing. It works fine at home!'},
+      {who:'agent', t:'14:22', text:'Sorry about that, Imran — let me check straight away.'},
+      {who:'cust', t:'14:22', text:'Please be quick, I’m still standing at the counter.'}
+    ],
+    copilot:[
+      {type:'knowledge', state:'validated', conf:95, title:'Why it declined — backend', src:'Authorisation logs · ••9920',
+        body:'Decline reason: <strong>international usage not enabled</strong> on this card. No fraud block. It can be switched on instantly from your side or in-app.',
+        sources:['Auth logs · ••9920','Card controls · Intl flag','Policy CC-07']},
+      {type:'reply', state:'pending', conf:90, title:'Suggested reply', src:'Tone: fast · Channel: chat',
+        reply:'Found it — your card simply has international usage switched off, that’s all (no fraud issue). I can enable it right now for you, or you can toggle it in the app under Cards → Controls. Want me to switch it on?'},
+      {type:'selfserve', state:'pending', conf:88, title:'Self-serve candidate', src:'Deflection model',
+        body:'“Card declined abroad / enable international usage” is a top live-contact driver that customers can fully resolve themselves in-app.',
+        volume:[['2,050','asked / month'],['61%','while travelling'],['~4 min','avg handle']],
+        targets:['In-app chatbot','Mobile app','Pre-travel email'],
+        article:'<h5>Using your card abroad</h5>Heading overseas? Turn on international usage before you travel: <strong>Cards → Controls → International usage</strong>. You can also set per-country and per-channel limits. Changes apply instantly — no need to contact us.'}
+    ],
+    agents:[
+      {id:'d1', ico:'card', name:'Enable international usage', lob:'Cards', desc:'Switch on international usage for card ••9920 with a sensible default limit.',
+        steps:['Verify card ••9920','Check fraud holds','Enable international flag','Set default limit'],
+        summary:[['Card','Signature ••9920'],['Control','International usage'],['Action','Enable'],['Default limit','₹2,00,000 / day']]},
+      {id:'d2', ico:'doc', name:'Summarise & dispose', lob:'Omni', desc:'Wrap the chat with summary and disposition.',
+        steps:['Summarise chat','Extract intent','Propose disposition','Draft CRM note'],
+        summary:[['Intent','Intl decline'],['Outcome','Enabled · resolved'],['Disposition','Resolved · FCR'],['Follow-up','None']]}
+    ]
+  },
+
+  /* ---- additional chat (for 3:1 concurrent) ---- */
+  {
+    id:'i5', channel:'chat', lob:'Wealth', live:true, sentiment:'neu', sentVal:0.12, awaitingReply:true,
+    customer:{name:'Lakshmi Rao', initials:'LR', acct:'WM-30781', cif:'CIF 55620918', tier:'Priority', risk:'Low', value:'₹52.0L', since:'2014', sentiment:'Considering'},
+    waited:'03:05', preview:'Wants to redeem part of a mutual fund holding — tax impact?',
+    strip:[
+      {ico:'trend', label:'Portfolio', val:'₹52.0L · 6 funds'},
+      {ico:'card', label:'Holding', val:'Bluechip Equity'},
+      {ico:'clock', label:'Held', val:'2.5 years'},
+      {ico:'flag', label:'Tax', val:'LTCG applies'}
+    ],
+    messages:[
+      {who:'cust', t:'13:58', text:'I’m thinking of redeeming about 2 lakhs from my Bluechip Equity fund. Will I be taxed on it?'},
+      {who:'agent', t:'13:59', text:'Great question, Lakshmi — let me pull up the holding and the tax treatment for you.'}
+    ],
+    copilot:[
+      {type:'knowledge', state:'validated', conf:93, title:'Tax treatment — backend', src:'Portfolio engine · WM-30781',
+        body:'Units held <strong>>12 months</strong>, so gains are <strong>long-term (LTCG)</strong>. On a ₹2,00,000 redemption, est. taxable gain ≈ ₹74,000; LTCG over the ₹1.25L annual exemption is taxed at 12.5%. No exit load.',
+        sources:['Portfolio · WM-30781','Fund factsheet','Tax rules · LTCG FY25']},
+      {type:'reply', state:'pending', conf:86, title:'Suggested reply', src:'Tone: advisory · Channel: chat',
+        reply:'Since you’ve held these units over a year, the gains are long-term. On a ₹2L redemption your estimated gain is about ₹74,000 — only the portion above the ₹1.25L yearly exemption is taxed, at 12.5%, and there’s no exit load. Would you like me to model the exact post-tax amount?'},
+      {type:'nba', state:'pending', conf:84, title:'Next best action', src:'Advisory engine',
+        body:'Offer to model the <strong>exact post-tax proceeds</strong> and flag that a partial systematic withdrawal could spread the tax across years.',
+        steps:['Model post-tax proceeds','Compare lump-sum vs SWP','Share illustration','Place redemption on approval']}
+    ],
+    agents:[
+      {id:'e1', ico:'doc', name:'Model post-tax proceeds', lob:'Wealth', desc:'Calculate exact net proceeds and tax on the proposed redemption.',
+        steps:['Pull cost basis','Compute LTCG','Apply exemption + rate','Generate illustration'],
+        summary:[['Redemption','₹2,00,000'],['Est. gain','₹74,000'],['Taxable','₹0 (within exemption)*'],['Net proceeds','₹2,00,000'],['Exit load','None']]},
+      {id:'e2', ico:'refund', name:'Place redemption', lob:'Wealth', desc:'Stage the partial redemption for the customer to authorise.',
+        steps:['Confirm units','Stage redemption order','Attach tax note','Queue for e-auth'],
+        summary:[['Fund','Bluechip Equity'],['Amount','₹2,00,000'],['Settlement','T+2'],['Status','Awaiting customer auth']]}
+    ]
+  },
+
+  /* ---- additional call (1:1) ---- */
+  {
+    id:'i6', channel:'call', lob:'Insurance', live:false, sentiment:'neu', sentVal:0.05,
+    customer:{name:'Vikram Joshi', initials:'VJ', acct:'MT-61209', cif:'CIF 22087734', tier:'Standard', risk:'Low', value:'₹2.4L', since:'2021', sentiment:'Neutral'},
+    waited:'00:00', preview:'Motor policy lapses in 4 days — wants to renew',
+    strip:[
+      {ico:'shield', label:'Policy', val:'Motor · MT-61209'},
+      {ico:'clock', label:'Expires', val:'In 4 days'},
+      {ico:'trend', label:'NCB', val:'35% earned'},
+      {ico:'flag', label:'Claims', val:'None this year'}
+    ],
+    transcript:[
+      {who:'cust', t:'00:08', text:'Hi, I got a reminder that my car insurance is about to expire. I want to renew it before it lapses.'},
+      {who:'agent', t:'00:19', text:'Absolutely, I can take care of that. You’ve got a clean year, so your no-claim bonus has gone up too.'}
+    ],
+    copilot:[
+      {type:'knowledge', state:'validated', conf:96, title:'Renewal quote — backend', src:'Policy engine · MT-61209',
+        body:'Renewal premium <strong>₹11,480</strong> including <strong>35% no-claim bonus</strong> (up from 25%). Same cover as last year. No inspection required if renewed before expiry.',
+        sources:['Policy · MT-61209','NCB ledger','Underwriting rules']},
+      {type:'reply', state:'pending', conf:89, title:'Suggested talk track', src:'Tone: helpful · Compliant',
+        reply:'“Good news — because you didn’t claim this year your no-claim bonus is now 35%, so this year’s renewal is ₹11,480 for the same cover. If we renew before it expires there’s no inspection needed. Shall I process it?”'},
+      {type:'nba', state:'pending', conf:85, title:'Next best action', src:'Workflow engine',
+        body:'Confirm cover unchanged, take consent, then <strong>process the renewal</strong> and send the policy document.',
+        steps:['Confirm cover unchanged','Capture renewal consent','Process renewal payment','Issue policy document']}
+    ],
+    agents:[
+      {id:'f1', ico:'shield', name:'Process policy renewal', lob:'Insurance', desc:'Renew motor policy MT-61209 at the quoted premium with NCB applied.',
+        steps:['Lock renewal quote','Apply 35% NCB','Confirm cover','Generate renewal'],
+        summary:[['Policy','MT-61209'],['Premium','₹11,480'],['NCB','35%'],['Cover','Unchanged'],['Inspection','Not required']]},
+      {id:'f2', ico:'doc', name:'Summarise & dispose', lob:'Omni', desc:'Close the call with summary and disposition.',
+        steps:['Summarise call','Extract outcome','Propose disposition','Draft CRM note'],
+        summary:[['Intent','Policy renewal'],['Outcome','Renewed'],['Disposition','Resolved · FCR'],['Follow-up','Doc sent']]}
+    ]
+  },
+
+  /* ---- additional email (async) ---- */
+  {
+    id:'i7', channel:'email', lob:'Lending', live:false, sentiment:'neu', sentVal:0.0,
+    customer:{name:'Anita George', initials:'AG', acct:'LN-48820', cif:'CIF 67451290', tier:'Standard', risk:'Low', value:'₹9.7L', since:'2018', sentiment:'Practical'},
+    waited:'45m', preview:'Re: I want to foreclose my personal loan — what’s the payoff?',
+    strip:[
+      {ico:'card', label:'Loan', val:'Personal · LN-48820'},
+      {ico:'clock', label:'Outstanding', val:'₹3.8L'},
+      {ico:'trend', label:'Tenure left', val:'14 months'},
+      {ico:'flag', label:'Foreclosure', val:'Allowed'}
+    ],
+    email:{
+      subject:'Re: I want to foreclose my personal loan — what’s the payoff?',
+      thread:[
+        {who:'cust', name:'Anita George', addr:'anita.george@email.com', t:'Today · 10:55',
+          body:'<p>Hi,</p><p>I’d like to close my personal loan (LN-48820) early. Could you tell me the exact foreclosure amount and whether there are any charges? I’d like to pay it off this month.</p><p>Regards,<br>Anita</p>'}
+      ]
+    },
+    copilot:[
+      {type:'knowledge', state:'validated', conf:97, title:'Foreclosure figure — backend', src:'Loan engine · LN-48820',
+        body:'Principal outstanding <strong>₹3,80,000</strong> + accrued interest ₹2,140. Foreclosure charge <strong>2% + GST</strong> ≈ ₹8,968. Total payoff <strong>≈ ₹3,91,108</strong>, valid till month-end.',
+        sources:['Loan engine · LN-48820','Foreclosure policy LP-12','GST schedule']},
+      {type:'reply', state:'pending', conf:91, title:'Suggested email reply', src:'Tone: clear · Channel: email',
+        reply:'Dear Anita,<br><br>Happy to help you close LN-48820 early. As of today the payoff is approximately ₹3,91,108 — that’s ₹3,80,000 principal, ₹2,140 accrued interest, and a 2% + GST foreclosure charge of about ₹8,968. This figure is valid until month-end. Reply to confirm and I’ll share the exact final amount and payment link.<br><br>Regards,<br>Parteek_Agent · Loans Support'},
+      {type:'selfserve', state:'pending', conf:82, title:'Self-serve candidate', src:'Deflection model',
+        body:'Foreclosure / payoff quote requests are routine and fully data-driven — ideal for an in-app calculator and instant statement.',
+        volume:[['640','asked / month'],['44%','foreclose same month'],['~7 min','avg handle']],
+        targets:['Mobile app','Help Center','In-app chatbot'],
+        article:'<h5>Foreclose your loan early</h5>You can get an exact payoff figure anytime in the app: <strong>Loans → Manage → Foreclose</strong>. It shows principal, accrued interest and any foreclosure charge, with a payment link — settle in a few taps and download your closure letter instantly.'}
+    ],
+    agents:[
+      {id:'g1', ico:'refund', name:'Generate payoff statement', lob:'Lending', desc:'Produce an exact, dated foreclosure statement with payment link.',
+        steps:['Compute principal + interest','Apply foreclosure charge + GST','Generate dated statement','Attach payment link'],
+        summary:[['Loan','LN-48820'],['Principal','₹3,80,000'],['Charge','₹8,968'],['Total payoff','₹3,91,108'],['Valid till','Month-end']]},
+      {id:'g2', ico:'doc', name:'Summarise & dispose', lob:'Omni', desc:'Close the email with summary and disposition.',
+        steps:['Summarise thread','Extract intent','Propose disposition','Draft CRM note'],
+        summary:[['Intent','Loan foreclosure'],['Outcome','Quote shared'],['Disposition','Pending payment'],['Follow-up','On confirm']]}
+    ]
+  }
+];
+
+/* ============================================================
+   CALL SCORING — AI auto-QA, validated by a human QA lead
+   ============================================================ */
+const QA_TARGET = 85;
+const QA = {
+  i1:{overall:88, cats:[['Compliance & adherence',96,'shield'],['Communication & empathy',90,'chat'],['Resolution & accuracy',85,'check'],['Process & efficiency',80,'clock'],['AI validation',94,'bolt']],
+    moments:[['pos','00:58','Verified identity before discussing the account — PII handled correctly.'],['pos','01:20','Used the zero-liability policy to reassure and de-escalate frustration.'],['coach','02:10','Brief dead air during the transaction lookup — narrate the wait next time.']],
+    coach:'Excellent compliance and de-escalation. Tighten dead air during backend lookups.', learn:'Filling silences during lookups'},
+  i2:{overall:91, cats:[['Compliance & adherence',93,'shield'],['Communication & empathy',92,'chat'],['Resolution & accuracy',90,'check'],['Process & efficiency',89,'clock'],['AI validation',92,'bolt']],
+    moments:[['pos','12:03','Set expectations quickly and warmly while checking eligibility.'],['pos','12:05','Quoted an accurate EMI grounded in the offer engine.'],['coach','12:06','Could have offered the e-sign link sooner to speed closure.']],
+    coach:'Fast, accurate and friendly. Push for the next step (e-sign) a touch earlier.', learn:'Driving to next step'},
+  i3:{overall:93, cats:[['Compliance & adherence',95,'shield'],['Communication & empathy',95,'chat'],['Resolution & accuracy',92,'check'],['Process & efficiency',90,'clock'],['AI validation',92,'bolt']],
+    moments:[['pos','09:41','Acknowledged the delay empathetically before giving the update.'],['pos','—','Gave an exact settlement breakdown including the policy excess.'],['coach','—','Commit to a specific cashless-authorisation time to cut repeat contacts.']],
+    coach:'Empathetic and precise. Commit to a firm follow-up time every email.', learn:'Setting firm timelines'},
+  i4:{overall:87, cats:[['Compliance & adherence',92,'shield'],['Communication & empathy',86,'chat'],['Resolution & accuracy',88,'check'],['Process & efficiency',90,'clock'],['AI validation',80,'bolt']],
+    moments:[['pos','14:22','Responded fast to an embarrassed, time-pressured customer.'],['coach','14:23','Confirm the exact decline reason before reassuring on fraud.'],['coach','14:24','Lead with “I can enable it now” rather than explaining the toggle first.']],
+    coach:'Good speed and empathy under pressure. Lead with the fix, then the explanation.', learn:'Leading with the resolution'},
+  i5:{overall:90, cats:[['Compliance & adherence',94,'shield'],['Communication & empathy',88,'chat'],['Resolution & accuracy',92,'check'],['Process & efficiency',85,'clock'],['AI validation',91,'bolt']],
+    moments:[['pos','13:59','Correctly framed the long-term capital gains treatment and exemption.'],['pos','—','Offered to model exact post-tax proceeds — strong advisory instinct.'],['coach','—','Add the standard tax-advice suitability disclaimer.']],
+    coach:'Accurate, advisory tone. Always include the tax-advice disclaimer.', learn:'Mandatory disclaimers'},
+  i6:{overall:92, cats:[['Compliance & adherence',95,'shield'],['Communication & empathy',92,'chat'],['Resolution & accuracy',93,'check'],['Process & efficiency',90,'clock'],['AI validation',90,'bolt']],
+    moments:[['pos','00:19','Highlighted the improved no-claim bonus proactively.'],['pos','—','Confirmed cover unchanged before processing the renewal.'],['coach','—','Capture explicit renewal consent wording for the record.']],
+    coach:'Smooth, proactive renewal. Log explicit consent wording every time.', learn:'Capturing consent'},
+  i7:{overall:89, cats:[['Compliance & adherence',93,'shield'],['Communication & empathy',88,'chat'],['Resolution & accuracy',90,'check'],['Process & efficiency',88,'clock'],['AI validation',86,'bolt']],
+    moments:[['pos','10:55','Gave a clear, itemised payoff figure with a validity date.'],['coach','—','State the foreclosure-charge basis to pre-empt a follow-up question.'],['pos','—','Offered a payment link to reduce back-and-forth.']],
+    coach:'Clear and itemised. Pre-empt charge questions to cut follow-ups.', learn:'Pre-empting questions'},
+};
+const QA_ORDER = ['i6','i1','i7','i5','i4','i2','i3']; // chronological-ish for the shift trend
+
+/* QA is always scoped to the individual agent handling the work — never a blended team number */
+const CURRENT_AGENT = 'Parteek_Agent';
+function agentOf(id){ return (QA[id] && QA[id].agent) || CURRENT_AGENT; }
+function ownedIds(){ return Object.keys(QA).filter(id=>agentOf(id)===CURRENT_AGENT); }
+function ownedOrder(){ return QA_ORDER.filter(id=>agentOf(id)===CURRENT_AGENT); }
+
+function scoreBand(s){
+  if(s>=90) return {l:'Excellent', c:'var(--validated)'};
+  if(s>=80) return {l:'Strong', c:'var(--ai)'};
+  if(s>=70) return {l:'Developing', c:'var(--pending)'};
+  return {l:'Needs work', c:'var(--risk)'};
+}
+function scoreRing(s,size){
+  const stroke = size>=56?6:4;
+  const r=(size-stroke)/2, circ=2*Math.PI*r, off=circ*(1-s/100), col=scoreBand(s).c;
+  return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${off}" transform="rotate(-90 ${size/2} ${size/2})"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="var(--tx)" font-family="var(--f-display)" font-weight="700" font-size="${Math.round(size*0.3)}">${s}</text>
+  </svg>`;
+}
+function rollingScore(){
+  const vals = ownedIds().map(id=>QA[id].overall);
+  return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+}
+function catAverages(){
+  const names = QA.i1.cats.map(c=>[c[0],c[2]]);
+  const ids = ownedIds();
+  return names.map((n,idx)=>{
+    const avg = Math.round(ids.reduce((a,id)=>a+QA[id].cats[idx][1],0)/ids.length);
+    return [n[0], avg, n[1]];
+  });
+}
+function catRow(name,val,icoName){
+  return `<div class="cat-row">
+    <span class="ci">${ico(icoName)}</span>
+    <span class="cn">${name}</span>
+    <span class="ctrack"><span class="cfill" style="width:${val}%;background:${scoreBand(val).c}"></span></span>
+    <span class="cv" style="color:${scoreBand(val).c}">${val}</span>
+  </div>`;
+}
+
+/* ----- per-interaction call scorecard ----- */
+function openScorecard(ix){
+  const q = QA[ix.id]; if(!q) return;
+  const b = scoreBand(q.overall);
+  const chTitle = ix.channel==='call'?'Call':ix.channel==='chat'?'Chat':'Email';
+  const liveTag = ix.live?' · live, updating':'';
+  const m = $('#modal');
+  m.innerHTML = `
+    <div class="modal-head">
+      <div class="mh-ic" style="background:var(--validated-bg)">${ico('award')}</div>
+      <div><h3>${chTitle} scorecard</h3><div class="mh-sub">AI-scored · agent: ${CURRENT_AGENT} · ${ix.customer.name}${liveTag}</div></div>
+      <button class="mclose" id="mClose">${ico('x')}</button>
+    </div>
+    <div class="modal-body">
+      <div class="sc-overall">
+        ${scoreRing(q.overall,64)}
+        <div>
+          <div class="sc-band" style="color:${b.c}">${b.l} · ${q.overall}/100</div>
+          <div class="sc-sub">AI assessment of this interaction across compliance, communication, resolution, efficiency and how well the copilot was used.</div>
+        </div>
+        <div class="sc-target">
+          <div class="l">Target</div><div class="v">${QA_TARGET}</div>
+          <div class="sc-delta ${q.overall>=QA_TARGET?'sc-up':'sc-down'}">${q.overall>=QA_TARGET?'+':''}${q.overall-QA_TARGET}</div>
+        </div>
+      </div>
+      <div class="sc-section-label">Score breakdown</div>
+      ${q.cats.map(c=>catRow(c[0],c[1],c[2])).join('')}
+      <div class="sc-section-label" style="margin-top:12px">Key moments</div>
+      <div class="sc-moments">
+        ${q.moments.map(mo=>`<div class="moment ${mo[0]}">
+          <span class="mk">${ico(mo[0]==='pos'?'check':'star')}</span>
+          <div class="mc"><div class="mt">${mo[1]==='—'?'flagged':mo[1]}</div><p>${mo[2]}</p></div>
+        </div>`).join('')}
+      </div>
+      <div class="sc-coach">
+        <span class="cco">${ico('cap')}</span>
+        <div class="ctx">${q.coach}<br><button class="learn" id="scLearn">${ico('cap')} Assign micro-learning: ${q.learn}</button></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-review" id="mReview">Request QA review</button>
+      <button class="mf-approve" id="mAck">${ico('check')} ${q.ack?'Acknowledged':'Acknowledge'}</button>
+    </div>`;
+  $('#modalScrim').classList.add('show');
+  $('#mClose').onclick = closeModal;
+  $('#scLearn').onclick = ()=> toast('ai','Micro-learning assigned: '+q.learn);
+  $('#mReview').onclick = ()=>{ closeModal(); toast('ai','Sent to QA lead for human review'); };
+  $('#mAck').onclick = ()=>{ q.ack=true; closeModal(); toast('ok','Scorecard acknowledged · logged to your record'); };
+}
+
+/* ----- agent performance summary (rolling, this shift) ----- */
+function openPerformanceModal(){
+  const roll = rollingScore(), b = scoreBand(roll);
+  const m = $('#modal');
+  const order = ownedOrder();
+  const max = Math.max(...order.map(id=>QA[id].overall));
+  m.innerHTML = `
+    <div class="modal-head">
+      <div class="mh-ic" style="background:var(--validated-bg)">${ico('gauge')}</div>
+      <div><h3>${CURRENT_AGENT} · your QA</h3><div class="mh-sub">Your score only · ${order.length} interactions you handled this shift</div></div>
+      <button class="mclose" id="mClose">${ico('x')}</button>
+    </div>
+    <div class="modal-body">
+      <div class="sc-overall">
+        ${scoreRing(roll,64)}
+        <div>
+          <div class="sc-band" style="color:${b.c}">${b.l} · avg ${roll}</div>
+          <div class="sc-sub">Your personal AI-QA average across every interaction <strong>you</strong> handled this shift — not a team or blended score.</div>
+        </div>
+        <div class="sc-target">
+          <div class="l">Target</div><div class="v">${QA_TARGET}</div>
+          <div class="sc-delta ${roll>=QA_TARGET?'sc-up':'sc-down'}">${roll>=QA_TARGET?'+':''}${roll-QA_TARGET}</div>
+        </div>
+      </div>
+      <div class="sc-section-label">Your score trend</div>
+      <div class="trend-bars">
+        ${order.map(id=>{const s=QA[id].overall;const h=Math.round((s/max)*100);
+          return `<div class="tb" title="${INTERACTIONS.find(i=>i.id===id).customer.name}: ${s}"><div class="bar" style="height:${h}%;background:${scoreBand(s).c}"></div><span class="bl">${s}</span></div>`;}).join('')}
+      </div>
+      <div class="sc-section-label">Your category averages</div>
+      ${catAverages().map(c=>catRow(c[0],c[1],c[2])).join('')}
+      <div class="sc-section-label" style="margin-top:12px">Recently scored</div>
+      <div class="sc-list">
+        ${order.slice().reverse().map(id=>{const ix=INTERACTIONS.find(i=>i.id===id);const s=QA[id].overall;const bb=scoreBand(s);
+          return `<div class="sr" data-id="${id}">
+            <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor">${ICONS[ix.channel]}</svg>
+            <span class="sn">${ix.customer.name}</span>
+            <span class="slob">${ix.lob.split(' ')[0]}</span>
+            <span class="spill" style="color:${bb.c};background:${bb.c.replace('var(--','var(--').replace(')','-bg)')}">${s}</span>
+          </div>`;}).join('')}
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-review" id="mClose2">Close</button>
+      <button class="mf-approve" id="mExport">${ico('doc')} Export to QA</button>
+    </div>`;
+  $('#modalScrim').classList.add('show');
+  $('#mClose').onclick = closeModal;
+  $('#mClose2').onclick = closeModal;
+  $('#mExport').onclick = ()=>{ closeModal(); toast('ok','Shift scorecard exported to QA dashboard'); };
+  m.querySelectorAll('.sc-list .sr').forEach(r=>r.onclick=()=>{
+    const ix=INTERACTIONS.find(i=>i.id===r.dataset.id);
+    if(ix) openScorecard(ix);
+  });
+}
+
+function updatePerfChip(){
+  const roll = rollingScore();
+  const chip = $('#perfChip'); if(!chip) return;
+  chip.title = `Your QA score this shift · ${CURRENT_AGENT}`;
+  chip.innerHTML = `${scoreRing(roll,30)}<span class="pc-meta"><small>Your QA</small><b>${roll} · you</b></span>`;
+}
+
+/* ============================================================
+   STATE + RENDER
+   ============================================================ */
+let activeId = 'i1';
+let chanFilter = 'all';
+let selfServePushed = 0;
+const $ = s => document.querySelector(s);
+
+function activeIx(){return INTERACTIONS.find(i=>i.id===activeId)}
+
+/* ----- queue ----- */
+function renderQueue(){
+  const list = $('#queueList');
+  const items = INTERACTIONS.filter(i=>chanFilter==='all'||i.channel===chanFilter);
+  list.innerHTML = items.map(i=>{
+    const sentCls = i.sentiment==='pos'?'sent-pos':i.sentiment==='neg'?'sent-neg':'sent-neu';
+    const liveTag = i.live ? '<span class="tag live">● Live</span>' : '<span class="tag queued">Queued</span>';
+    return `<div class="qitem ${i.id===activeId?'active':''}" data-chan="${i.channel}" data-id="${i.id}">
+      <div class="qitem-top">
+        <svg class="chan-ico" viewBox="0 0 24 24" fill="none" stroke="var(--tx-2)">${ICONS[i.channel]}</svg>
+        <span class="cname">${i.customer.name}</span>
+        <span class="ctime mono">${i.waited}</span>
+      </div>
+      <div class="qmeta">
+        ${liveTag}
+        <span class="tag lob">${i.lob}</span>
+        <span class="sent-mini ${sentCls}"></span>
+      </div>
+      <div class="preview">${i.preview}</div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.qitem').forEach(el=>el.onclick=()=>{activeId=el.dataset.id;renderAll();if(window.innerWidth<=920)showMobile('center')});
+  $('#queueCount').textContent = INTERACTIONS.length + ' active';
+  // dynamic channel counts
+  const counts={all:INTERACTIONS.length};
+  ['call','chat','email'].forEach(ch=>counts[ch]=INTERACTIONS.filter(i=>i.channel===ch).length);
+  document.querySelectorAll('#chanFilter .chan-btn').forEach(b=>{
+    const n=b.querySelector('.n'); if(n) n.textContent=counts[b.dataset.chan];
+  });
+}
+
+/* ----- customer 360 ----- */
+function renderCust360(){
+  const c = activeIx().customer;
+  $('#cust360').innerHTML = `
+    <div class="cust360-top">
+      <div class="cust-avatar">${c.initials}</div>
+      <div class="cust-id">
+        <h3>${c.name}</h3>
+        <div class="ids"><span>${c.acct}</span><span>${c.cif}</span><span>Since ${c.since}</span></div>
+      </div>
+      <div class="cust-badges">
+        <div class="cbadge value"><div class="l">Lifetime value</div><div class="v">${c.value}</div></div>
+        <div class="cbadge tier"><div class="l">Segment</div><div class="v">${c.tier}</div></div>
+        <div class="cbadge risk"><div class="l">Risk</div><div class="v">${c.risk}</div></div>
+      </div>
+    </div>
+    <div class="cust-strip">
+      ${activeIx().strip.map(s=>`<div class="strip-pill">${ico(s.ico)}<span>${s.label}</span> <b>${s.val}</b></div>`).join('')}
+    </div>`;
+}
+
+/* ----- conversation header ----- */
+function renderConvoHead(){
+  const i = activeIx();
+  let mid = '';
+  if(i.channel==='call'){
+    mid = `<span class="ctitle"><span class="live-dot"></span>Live call</span>
+           <span class="call-timer" id="callTimer">05:12</span>`;
+  } else if(i.channel==='chat'){
+    mid = `<span class="ctitle">${ico('chat')} Live chat · ${i.lob}</span>`;
+  } else {
+    mid = `<span class="ctitle">${ico('email')} Email · ${i.lob}</span>`;
+  }
+  const callCtrls = i.channel==='call'
+    ? `<button class="icon-btn" title="Mute">${ico('user')}</button>
+       <button class="icon-btn" title="Hold">${ico('clock')}</button>
+       <button class="icon-btn end" title="End call">${ico('call')}</button>`
+    : `<button class="icon-btn" title="Transfer">${ico('send')}</button>
+       <button class="icon-btn" title="Attach">${ico('doc')}</button>`;
+  const scoreBtn = `<button class="icon-btn score" id="scoreBtn" title="Performance scorecard">${ico('award')}</button>`;
+  $('#convoHead').innerHTML = `${mid}<div class="right">${scoreBtn}${callCtrls}</div>`;
+  $('#convoHead').querySelectorAll('.ctitle svg').forEach(s=>s.style.stroke='var(--ai)');
+  const sb=$('#scoreBtn'); if(sb) sb.onclick=()=>openScorecard(activeIx());
+}
+
+/* ----- conversation body ----- */
+function renderConvoBody(){
+  const i = activeIx();
+  let html = '';
+  if(i.channel==='call'){
+    const pct = ((i.sentVal+1)/2)*100;
+    html += `<div class="sentiment-rail">
+      <span class="lab">Live sentiment</span>
+      <div class="sent-track"><div class="sent-marker" id="sentMarker" style="left:${pct}%"></div></div>
+      <span class="sent-val mono" id="sentVal" style="color:var(--risk)">Negative</span>
+    </div>`;
+    html += i.transcript.map(turn=>renderTurn(turn)).join('');
+  } else if(i.channel==='chat'){
+    html += i.messages.map(turn=>renderTurn(turn)).join('');
+  } else {
+    html += `<div class="email-view" style="display:block">
+      <div class="email-subject">${ico('email')} ${i.email.subject}</div>
+      ${i.email.thread.map(m=>`
+        <div class="email-card">
+          <div class="eh">
+            <div class="turn-av" style="background:linear-gradient(135deg,#7a4f97,#3f3a7a)">${i.customer.initials}</div>
+            <div class="ef"><b>${m.name}</b><div class="em mono">${m.addr}</div></div>
+            <div class="etime mono">${m.t}</div>
+          </div>
+          <div class="eb">${m.body}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+  $('#convoBody').innerHTML = html;
+  const cb = $('#convoBody'); cb.scrollTop = cb.scrollHeight;
+}
+function renderTurn(turn){
+  const av = turn.who==='cust' ? activeIx().customer.initials : (turn.ai?'AI':'PA');
+  let text = turn.text;
+  if(turn.pii){ text = text.replace(turn.pii, `<span class="pii">●●● masked ●●●</span>`); }
+  const aiTag = turn.ai ? `<span class="ai-spoke">${ico('bolt')} AI-assisted · you spoke</span>` : '';
+  return `<div class="turn ${turn.who}">
+    <div class="turn-av">${av}</div>
+    <div class="turn-content">
+      <div class="turn-meta"><span>${turn.who==='cust'?activeIx().customer.name.split(' ')[0]:'You'}</span><span>${turn.t}</span></div>
+      <div class="bubble">${text}</div>
+      ${aiTag}
+    </div>
+  </div>`;
+}
+
+/* ----- composer ----- */
+function renderComposer(){
+  const i = activeIx();
+  if(i.channel==='call'){
+    $('#composer').innerHTML = `
+      <div class="composer-ai-hint">
+        <div class="ico">${ico('bolt')}</div>
+        <span><b>Copilot is listening.</b> Talk tracks and the next best action appear on the right as the call evolves — approve to log them.</span>
+      </div>
+      <div class="composer-box">
+        <div class="composer-tools">
+          <button class="ctool" title="Notes">${ico('doc')}</button>
+          <button class="ctool" title="Knowledge">${ico('book')}</button>
+        </div>
+        <textarea placeholder="Type a private note or a wrap-up disposition…"></textarea>
+        <button class="send-btn">${ico('send')} Log note</button>
+      </div>`;
+  } else {
+    const ph = i.channel==='chat' ? 'Reply to the customer…' : 'Compose your email reply…';
+    $('#composer').innerHTML = `
+      <div class="composer-ai-hint">
+        <div class="ico">${ico('bolt')}</div>
+        <span><b>Suggested reply ready.</b> Insert the Copilot draft, edit anything, then send — nothing goes out until you do.</span>
+        <button class="use" id="insertReply">Insert draft</button>
+      </div>
+      <div class="composer-box">
+        <div class="composer-tools">
+          <button class="ctool" title="Attach">${ico('doc')}</button>
+          <button class="ctool" title="Knowledge">${ico('book')}</button>
+        </div>
+        <textarea id="replyArea" placeholder="${ph}"></textarea>
+        <button class="send-btn" id="sendReply">${ico('send')} ${i.channel==='email'?'Send email':'Send'}</button>
+      </div>`;
+    const insertBtn = $('#insertReply');
+    if(insertBtn) insertBtn.onclick = ()=>{
+      const draft = i.copilot.find(c=>c.type==='reply');
+      $('#replyArea').value = (draft.reply||'').replace(/<br>/g,'\n').replace(/<[^>]+>/g,'');
+      $('#replyArea').focus();
+    };
+    $('#sendReply').onclick = ()=>{
+      if(!$('#replyArea').value.trim()){toast('ai','Insert or write a reply first');return;}
+      toast('ok', (i.channel==='email'?'Email sent':'Message sent') + ' to ' + i.customer.name.split(' ')[0]);
+      $('#replyArea').value='';
+    };
+  }
+}
+
+/* ----- copilot cards ----- */
+function renderCopilot(){
+  const i = activeIx();
+  const body = $('#copilotBody');
+  const cards = visibleCopilot(i);
+  body.innerHTML = cards.length
+    ? cards.map((c,idx)=>cardHTML(c,idx)).join('')
+    : `<div style="padding:22px 14px;text-align:center;color:var(--tx-3);font-size:12px;line-height:1.55">No copilot cards match your preferences.<br>Adjust filters in Preferences.</div>`;
+  body.querySelectorAll('.ai-card').forEach((card,idx)=>{
+    const c = cards[idx];
+    // operational validation
+    const ap = card.querySelector('.vbtn.approve');
+    if(ap) ap.onclick = ()=>{ c.state='validated'; renderCopilot(); updateCounts(); toast('ok','Validated · '+c.title); };
+    const dm = card.querySelector('.vbtn.dismiss');
+    if(dm) dm.onclick = ()=>{ c.state='dismissed'; renderCopilot(); updateCounts(); };
+    const editBtn = card.querySelector('.vbtn.edit');
+    if(editBtn) editBtn.onclick = ()=>{
+      const draft = card.querySelector('.reply-draft');
+      if(draft){
+        const editable = draft.getAttribute('contenteditable')==='true';
+        draft.setAttribute('contenteditable', editable?'false':'true');
+        editBtn.querySelector('span').textContent = editable?'Edit':'Done';
+        if(!editable) draft.focus();
+      } else { toast('ai','Opening editor for '+c.title); }
+    };
+    // AI feedback (training loop)
+    const up = card.querySelector('.fb-btn.up');
+    const down = card.querySelector('.fb-btn.down');
+    const reasons = card.querySelector('.fb-reasons');
+    if(up) up.onclick = ()=>{
+      c.fb = c.fb==='up'?null:'up'; c.fbReason=null;
+      if(reasons) reasons.classList.remove('show');
+      renderCopilot();
+      if(c.fb==='up') toast('ai','Marked helpful · sent to model training');
+    };
+    if(down) down.onclick = ()=>{
+      c.fb = c.fb==='down'?null:'down';
+      if(c.fb!=='down') c.fbReason=null;
+      renderCopilot();
+    };
+    card.querySelectorAll('.fb-chip').forEach(ch=>ch.onclick=()=>{
+      c.fbReason = ch.dataset.r; renderCopilot();
+      toast('ai','Feedback captured: “'+ch.dataset.r+'” · sent to training');
+    });
+    // push to self-serve
+    const ss = card.querySelector('.ss-btn');
+    if(ss) ss.onclick = ()=> openSelfServeModal(c);
+  });
+  updateCounts();
+}
+function cardHTML(c,idx){
+  const confColor = c.type==='risk' ? 'var(--risk)' : c.type==='selfserve' ? 'var(--human)' : 'var(--ai)';
+  let inner = '';
+  if(c.type==='nba'){
+    inner = `<div class="ai-card-body">${c.body}
+      <ul class="nba-steps">${c.steps.map((s,n)=>`<li><span class="num">${n+1}</span>${s}</li>`).join('')}</ul></div>`;
+  } else if(c.type==='reply'){
+    inner = `<div class="ai-card-body"><div class="reply-draft" contenteditable="false">${c.reply}</div></div>`;
+  } else if(c.type==='knowledge'){
+    inner = `<div class="ai-card-body">${c.body}
+      <div class="grounded">${(c.sources||[]).map(s=>`<span class="source-chip">${ico('book')}${s}</span>`).join('')}</div></div>`;
+  } else if(c.type==='risk'){
+    inner = `<div class="ai-card-body">${c.body}</div>`;
+  } else if(c.type==='selfserve'){
+    inner = `<div class="ai-card-body">${c.body}
+      <div class="ss-vol">${(c.volume||[]).map(v=>`<div class="ss-stat"><div class="v">${v[0]}</div><div class="l">${v[1]}</div></div>`).join('')}</div>
+      <div class="grounded">${(c.targets||[]).map(t=>`<span class="source-chip">${ico('broadcast')}${t}</span>`).join('')}</div></div>`;
+  }
+  const stateLabel = {pending:'Awaiting you',validated:'Validated by you',dismissed:'Dismissed',risk:'Action required'}[c.state];
+  const headIco = c.type==='nba'?'trend':c.type==='reply'?'chat':c.type==='knowledge'?'book':c.type==='selfserve'?'broadcast':'shield';
+
+  // AI feedback row + self-serve push
+  const reasons = ['Inaccurate','Outdated','Wrong tone','Not relevant','Compliance risk'];
+  const fbRow = `<div class="ai-meta">
+      ${c.fbReason
+        ? `<span class="fb-done">${ico('cap')} Feedback sent: ${c.fbReason}</span>`
+        : `<div class="fb">
+            <span class="fb-q">Improve AI</span>
+            <button class="fb-btn up ${c.fb==='up'?'on':''}" title="Helpful — reinforce">${ico('thumbUp')}</button>
+            <button class="fb-btn down ${c.fb==='down'?'on':''}" title="Needs work — flag">${ico('thumbDown')}</button>
+          </div>
+          ${c.fb==='up'?'<span class="fb-done">'+ico('cap')+' Sent to training</span>':''}`}
+      ${(c.type==='knowledge'||c.type==='selfserve')
+        ? `<button class="ss-btn">${ico('broadcast')} ${c.type==='selfserve'?'Review &amp; push':'Push to self-serve'}</button>` : ''}
+      <div class="fb-reasons ${c.fb==='down'&&!c.fbReason?'show':''}">
+        ${reasons.map(r=>`<button class="fb-chip" data-r="${r}">${r}</button>`).join('')}
+      </div>
+    </div>`;
+
+  // self-serve cards approve = "publish"; others keep approve/dismiss
+  const validateRow = `<div class="validate">
+      <span class="v-state"><span class="vd"></span>${stateLabel}</span>
+      ${c.type==='reply'||c.type==='nba'?`<button class="vbtn edit">${ico('edit')}<span>Edit</span></button>`:''}
+      <button class="vbtn dismiss">${ico('x')}Dismiss</button>
+      <button class="vbtn approve">${ico('check')}${c.type==='selfserve'?'Approve':'Approve'}</button>
+    </div>`;
+
+  return `<div class="ai-card" data-state="${c.state}" data-type="${c.type}">
+    <div class="ai-card-head">
+      <div class="ic">${ico(headIco)}</div>
+      <div class="tt"><h4>${c.title}</h4><div class="src">${c.src}</div></div>
+      <div class="confidence">
+        <div class="conf-bar"><div class="conf-fill" style="width:${c.conf}%;background:${confColor}"></div></div>
+        <span class="conf-val" style="color:${confColor}">${c.conf}%</span>
+      </div>
+    </div>
+    ${inner}
+    ${fbRow}
+    ${validateRow}
+  </div>`;
+}
+function updateCounts(){
+  const i = activeIx();
+  const pending = i.copilot.filter(c=>c.state==='pending'||c.state==='risk').length;
+  $('#copilotCount').textContent = pending? pending+' to review' : 'all clear';
+  // global tally across all interactions
+  let total=0, awaiting=0, rated=0;
+  INTERACTIONS.forEach(ix=>ix.copilot.forEach(c=>{
+    if(c.state==='validated')total++;
+    if(c.state==='pending'||c.state==='risk')awaiting++;
+    if(c.fb)rated++;
+  }));
+  $('#aiStat').textContent = `${total+37} validated · ${awaiting} awaiting you`;
+  const fs = $('#footStats');
+  if(fs){
+    const memN = (typeof PREFS!=='undefined' && PREFS.memory) ? PREFS.memory.items.length + (PREFS.memory.instructions?1:0) : 0;
+    fs.innerHTML = `<span>${ico('user')} <b>${memN}</b> memory</span><span>${ico('cap')} <b>${rated}</b> rated</span><span class="ss">${ico('broadcast')} <b>${selfServePushed}</b> to self-serve</span>`;
+  }
+}
+
+/* ----- back office / AI agent dock ----- */
+function renderAgents(){
+  const i = activeIx();
+  const rail = $('#agentRail');
+  rail.innerHTML = i.agents.map(a=>{
+    const cls = a._state||'idle';
+    const label = cls==='running'?ico('spin','')+' Running…':cls==='done'?ico('check')+' Validated':ico('bolt')+' Activate agent';
+    const status = cls==='running'?'WORKING':cls==='done'?'DONE':'';
+    return `<div class="agent-card ${cls}" data-id="${a.id}">
+      ${status?`<span class="ac-status mono">${status}</span>`:''}
+      <div class="ac-top">
+        <div class="ac-ic">${ico(a.ico)}</div>
+        <div><h4>${a.name}</h4><div class="ac-lob">${a.lob}</div></div>
+      </div>
+      <p>${a.desc}</p>
+      <button class="activate">${label}</button>
+    </div>`;
+  }).join('');
+  rail.querySelectorAll('.agent-card').forEach(card=>{
+    card.querySelector('.activate').onclick = ()=>{
+      const a = i.agents.find(x=>x.id===card.dataset.id);
+      openTaskModal(a);
+    };
+  });
+}
+
+/* ----- task modal: run + validation gate ----- */
+function openTaskModal(agent){
+  const m = $('#modal');
+  m.innerHTML = `
+    <div class="modal-head">
+      <div class="mh-ic">${ico(agent.ico)}</div>
+      <div><h3>${agent.name}</h3><div class="mh-sub">AI agent · ${agent.lob} · SME validation</div></div>
+      <button class="mclose" id="mClose">${ico('x')}</button>
+    </div>
+    <div class="modal-body">
+      <ul class="task-prog" id="taskProg">
+        ${agent.steps.map((s,n)=>`<li class="${n===0?'active':'pending'}" data-n="${n}">
+          <span class="tp-dot">${n+1}</span>
+          <div class="tp-txt"><b>${s}</b><span class="st mono">${n===0?'running…':'queued'}</span></div>
+        </li>`).join('')}
+      </ul>
+      <div class="task-summary" id="taskSummary" style="opacity:.35">
+        ${agent.summary.map(r=>`<div class="ts-row"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`).join('')}
+      </div>
+      <div class="gate-note" id="gateNote" style="display:none">
+        ${ico('alert')}<span>Nothing has been committed to the backend yet. Review the result above — approving executes it under your name; dismissing discards it.</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-cancel" id="mCancel">Dismiss</button>
+      <button class="mf-approve" id="mApprove" disabled>${ico('check')} Approve &amp; execute</button>
+    </div>`;
+  $('#modalScrim').classList.add('show');
+  $('#mClose').onclick = closeModal;
+  $('#mCancel').onclick = closeModal;
+
+  // animate the steps
+  const steps = m.querySelectorAll('#taskProg li');
+  let n=0;
+  function advance(){
+    if(n>0){
+      steps[n-1].classList.remove('active');
+      steps[n-1].classList.add('done');
+      steps[n-1].querySelector('.tp-dot').innerHTML = ico('check');
+      steps[n-1].querySelector('.st').textContent='done';
+    }
+    if(n<steps.length){
+      steps[n].classList.remove('pending');
+      steps[n].classList.add('active');
+      steps[n].querySelector('.st').textContent='running…';
+      n++;
+      setTimeout(advance, 620);
+    } else {
+      // finished — open validation gate
+      $('#taskSummary').style.opacity='1';
+      $('#gateNote').style.display='flex';
+      const ap = $('#mApprove');
+      ap.disabled=false;
+      ap.onclick = ()=>{
+        agent._state='done';
+        closeModal();
+        renderAgents();
+        toast('ok', agent.name + ' executed · logged to '+activeIx().customer.acct);
+      };
+    }
+  }
+  agent._state='running'; renderAgents();
+  setTimeout(advance, 500);
+}
+function closeModal(){ $('#modalScrim').classList.remove('show'); 
+  // reset any still-running agent that wasn't approved
+  INTERACTIONS.forEach(i=>i.agents.forEach(a=>{if(a._state==='running')a._state='idle'}));
+  renderAgents();
+}
+$('#modalScrim').onclick = e=>{ if(e.target.id==='modalScrim') closeModal(); };
+
+/* ----- toast ----- */
+function toast(kind,msg){
+  const ic = kind==='ok'?ICONS.check:ICONS.bolt;
+  const el = document.createElement('div');
+  el.className='toast '+kind;
+  el.innerHTML = `<div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">${ic}</svg></div>${msg}`;
+  $('#toastWrap').appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';el.style.transition='.3s';},2200);
+  setTimeout(()=>el.remove(),2600);
+}
+
+/* ----- channel filter → enters channel focus mode ----- */
+$('#chanFilter').querySelectorAll('.chan-btn').forEach(b=>{
+  b.onclick = ()=> setChannelMode(b.dataset.chan);
+});
+
+function setChannelMode(ch){
+  $('#chanFilter').querySelectorAll('.chan-btn').forEach(x=>x.classList.toggle('on',x.dataset.chan===ch));
+  chanFilter = ch;
+  // load a sample live conversation for the chosen channel
+  if(ch!=='all'){
+    const first = INTERACTIONS.find(i=>i.channel===ch);
+    if(first && activeIx().channel!==ch) activeId = first.id;
+  }
+  renderAll();
+}
+
+/* ----- channel mode bar + concurrent (3:1) chat tabs ----- */
+function modeFor(ch){return ch==='call'?'1:1':ch==='chat'?'3:1':ch==='email'?'async':'omni'}
+function renderChannelBar(){
+  const bar = $('#channelBar');
+  const ch = chanFilter;
+  if(ch==='all'){
+    bar.innerHTML = `<div class="cb-left">
+        <span class="mode-badge mode-omni">${ico('focus')} Omni</span>
+        <span class="cb-hint">All channels in one inbox — pick <b>Call</b>, <b>Chat</b> or <b>Email</b> to enter focus mode</span>
+      </div>`;
+    return;
+  }
+  let left='', tabs='';
+  if(ch==='call'){
+    left = `<span class="mode-badge mode-call">${ico('focus')}<span class="ratio">1:1</span> Live voice</span>
+            <span class="cb-hint">Full focus — <b>one</b> live customer at a time</span>`;
+  } else if(ch==='email'){
+    const n = INTERACTIONS.filter(i=>i.channel==='email').length;
+    left = `<span class="mode-badge mode-email">${ico('inbox')} Async</span>
+            <span class="cb-hint">Work the queue at your pace · <b>${n}</b> in your inbox</span>`;
+  } else if(ch==='chat'){
+    const chats = INTERACTIONS.filter(i=>i.channel==='chat');
+    const awaiting = chats.filter(c=>c.awaitingReply).length;
+    left = `<span class="mode-badge mode-chat">${ico('users')}<span class="ratio">3:1</span> Concurrent</span>
+            <span class="cb-hint">Handling <b>${chats.length}</b> chats${awaiting?` · <b>${awaiting}</b> awaiting your reply`:''}</span>`;
+    tabs = `<div class="cc-tabs">${chats.map(c=>{
+      const sd = c.sentiment==='pos'?'var(--validated)':c.sentiment==='neg'?'var(--risk)':'var(--tx-3)';
+      const wait = c.awaitingReply && c.id!==activeId ? `<span class="wait-badge"><span class="wd"></span>reply</span>` : '';
+      return `<div class="cc-tab ${c.id===activeId?'active':''}" data-id="${c.id}">
+        <span class="sd" style="background:${sd}"></span>
+        <span><span class="nm">${c.customer.name.split(' ')[0]}</span> <span class="cc-lob">${c.lob.split(' ')[0]}</span></span>
+        <span class="tmr">${c.waited}</span>${wait}
+      </div>`;
+    }).join('')}</div>`;
+  }
+  bar.innerHTML = `<div class="cb-left">${left}</div>${tabs}`;
+  bar.querySelectorAll('.cc-tab').forEach(t=>t.onclick=()=>{
+    const c = INTERACTIONS.find(x=>x.id===t.dataset.id);
+    if(c) c.awaitingReply=false;        // opening it clears the "awaiting reply" flag
+    activeId = t.dataset.id; renderAll();
+  });
+}
+
+/* ----- push to self-serve training (SME validates AI-drafted content) ----- */
+function openSelfServeModal(card){
+  const targets = card.targets || ['Help Center','In-app chatbot','IVR','Mobile app'];
+  const allChannels = ['Help Center','In-app chatbot','IVR','Mobile app'];
+  const article = card.article || `<h5>${card.title}</h5>${(card.body||'').replace(/<[^>]+>/g,'')}`;
+  const m = $('#modal');
+  m.innerHTML = `
+    <div class="modal-head">
+      <div class="mh-ic" style="background:var(--human-bg)">${ico('broadcast')}</div>
+      <div><h3>Push to self-serve training</h3><div class="mh-sub">AI-drafted · you validate before publishing</div></div>
+      <button class="mclose" id="mClose">${ico('x')}</button>
+    </div>
+    <div class="modal-body">
+      <span class="ss-label">Self-serve content draft — edit anything</span>
+      <div class="ss-article" contenteditable="true">${article}</div>
+      <span class="ss-label">Publish to channels</span>
+      <div class="ss-channels" id="ssChannels">
+        ${allChannels.map(t=>`<button class="ss-chan ${targets.includes(t)?'on':''}" data-t="${t}">
+          <span class="box">${ico('check')}</span>${t}</button>`).join('')}
+      </div>
+      <div class="deflect-note">${ico('trend')}<span>This is AI-suggested content. As the SME, publish only what’s accurate — it becomes a customer-facing self-serve answer and trains the deflection model.</span></div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-cancel" id="mCancel">Cancel</button>
+      <button class="mf-publish" id="mPublish">${ico('broadcast')} Validate &amp; publish</button>
+    </div>`;
+  $('#modalScrim').classList.add('show');
+  $('#mClose').onclick = closeModal;
+  $('#mCancel').onclick = closeModal;
+  m.querySelectorAll('.ss-chan').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
+  $('#mPublish').onclick = ()=>{
+    const chosen = [...m.querySelectorAll('.ss-chan.on')].map(b=>b.dataset.t);
+    if(!chosen.length){ toast('ai','Pick at least one channel to publish to'); return; }
+    card.state='validated'; selfServePushed++;
+    closeModal(); renderCopilot();
+    toast('ok','Published to '+chosen.length+' self-serve channel'+(chosen.length>1?'s':'')+' · deflects future contacts');
+  };
+}
+
+/* ----- LOB pill (cosmetic cycle) ----- */
+const LOBS=['Cards & Payments','Lending','Insurance','Wealth'];
+$('#lobPill').onclick=()=>{
+  const cur=$('#lobPill').childNodes[2].textContent.trim();
+  const next=LOBS[(LOBS.indexOf(cur)+1)%LOBS.length];
+  $('#lobPill').innerHTML=`<span class="dot"></span> ${next}`;
+  toast('ai','Switched LOB context · '+next);
+};
+
+/* ----- presence toggle ----- */
+$('#presence').onclick=()=>{
+  const p=$('#presence');
+  p.classList.toggle('away');
+  $('#presenceLabel').textContent = p.classList.contains('away')?'Away · After-call work':'Available · Omni';
+};
+
+/* ----- performance chip → agent performance summary ----- */
+$('#perfChip').onclick = openPerformanceModal;
+
+/* ----- preferences button ----- */
+$('#settingsBtn').onclick = openPreferences;
+
+/* ----- mobile nav ----- */
+function showMobile(view){
+  document.querySelectorAll('#mobileNav button').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
+  $('.col.queue').classList.toggle('show',view==='queue');
+  $('.col.copilot').classList.toggle('show',view==='copilot');
+}
+$('#mobileNav').querySelectorAll('button').forEach(b=>b.onclick=()=>showMobile(b.dataset.view));
+
+/* ----- live call ticker & sentiment drift (interaction 1) ----- */
+let callSecs = 5*60+12;
+setInterval(()=>{
+  const t=$('#callTimer'); if(!t)return;
+  callSecs++;
+  const m=String(Math.floor(callSecs/60)).padStart(2,'0');
+  const s=String(callSecs%60).padStart(2,'0');
+  t.textContent=`${m}:${s}`;
+  // gently recover sentiment to show AI assist working
+  const i=activeIx();
+  if(i.channel==='call'){
+    i.sentVal=Math.min(0.35,i.sentVal+0.015);
+    const marker=$('#sentMarker'), val=$('#sentVal');
+    if(marker){ marker.style.left=((i.sentVal+1)/2*100)+'%'; }
+    if(val){
+      const lbl=i.sentVal>0.15?'Positive':i.sentVal>-0.15?'Neutral':'Negative';
+      const col=i.sentVal>0.15?'var(--validated)':i.sentVal>-0.15?'var(--pending)':'var(--risk)';
+      val.textContent=lbl; val.style.color=col;
+    }
+  }
+},1000);
+
+/* ----- in-call consult: supervisor / AI assist ----- */
+const HELP = {
+  ai:[{from:'ai',name:'AI assist',text:'Hi Parteek — I’m your AI assist. Ask me about the customer, policy, or next step and I’ll pull it from the backend.'}],
+  sup:[{from:'sup',name:'Meera · Team lead',text:'Hi Parteek, I’m on standby. Need a sign-off, a second opinion, or want me to whisper in?'}]
+};
+let helpTab='ai', helpOpen=false, helpUnread=0;
+
+function initHelp(){
+  $('#helpClose').innerHTML = ico('x');
+  $('#helpSend').innerHTML = ico('send');
+  const tabs=$('#helpTabs');
+  tabs.querySelector('[data-t="ai"]').innerHTML = `${ico('bolt')} AI assist`;
+  tabs.querySelector('[data-t="sup"]').innerHTML = `${ico('headset')} Supervisor`;
+  tabs.querySelectorAll('.help-tab').forEach(t=>t.onclick=()=>{ helpTab=t.dataset.t; renderHelp(); $('#helpInput').focus(); });
+  $('#helpClose').setAttribute('data-nodrag','');
+  $('#helpClose').onclick = ()=>toggleHelp(false);
+  $('#helpSend').onclick = helpSend;
+  $('#helpInput').addEventListener('keydown',e=>{ if(e.key==='Enter') helpSend(); });
+  makeDraggable($('#helpLauncher'), $('#helpLauncher'), { onClick:()=>toggleHelp(true) });
+  makeDraggable($('#helpWin'), $('#helpWin .help-head'), { onEnd:(moved,el)=>{ if(moved) helpWinPos={x:parseInt(el.style.left)||0,y:parseInt(el.style.top)||0}; } });
+  updateHelpBadge();
+}
+function toggleHelp(open){
+  helpOpen = open!==undefined?open:!helpOpen;
+  const win=$('#helpWin');
+  if(helpOpen){
+    if(PREFS.rememberPos && helpWinPos){ win.style.left=helpWinPos.x+'px'; win.style.top=helpWinPos.y+'px'; win.style.right='auto'; win.style.bottom='auto'; }
+    else { win.style.left=''; win.style.top=''; win.style.right=''; win.style.bottom=''; }
+  }
+  win.classList.toggle('open',helpOpen);
+  $('#helpLauncher').classList.toggle('hidden',helpOpen);
+  if(helpOpen){ helpUnread=0; updateHelpBadge(); renderHelp(); setTimeout(()=>$('#helpInput').focus(),60); }
+}
+function updateHelpBadge(){ const b=$('#helpBadge'); if(!b) return; b.style.display = helpUnread? 'grid':'none'; b.textContent = helpUnread; }
+function helpContextHTML(){ const i=activeIx(); return `${ico('user')} Private consult · re: <b>${i.customer.name}</b> · ${i.lob}`; }
+function updateHelpContext(){ const el=$('#helpContext'); if(el) el.innerHTML = helpContextHTML(); }
+function renderHelp(){
+  $('#helpTitle').textContent = helpTab==='ai'?'AI assist':'Supervisor';
+  $('#helpHeadIc').innerHTML = ico(helpTab==='ai'?'bolt':'headset');
+  $('#helpTabs').querySelectorAll('.help-tab').forEach(t=>t.classList.toggle('on',t.dataset.t===helpTab));
+  updateHelpContext();
+  $('#helpBody').innerHTML = HELP[helpTab].map(helpMsgHTML).join('');
+  const hb=$('#helpBody'); hb.scrollTop=hb.scrollHeight;
+}
+function helpMsgHTML(m){
+  if(m.from==='me') return `<div class="hmsg me"><div class="hav">PA</div><div><div class="hb">${m.text}</div></div></div>`;
+  const cls=m.from==='sup'?'sup':'them', av=m.from==='sup'?'ML':'AI';
+  return `<div class="hmsg ${cls}"><div class="hav">${av}</div><div><div class="hname">${m.name}</div><div class="hb">${m.text}</div></div></div>`;
+}
+function escapeHtml(s){ return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function helpSend(){
+  const inp=$('#helpInput'); const v=inp.value.trim(); if(!v) return;
+  const tab=helpTab;
+  HELP[tab].push({from:'me',text:escapeHtml(v)});
+  inp.value=''; renderHelp();
+  const hb=$('#helpBody');
+  const tr=document.createElement('div'); tr.id='typingRow'; tr.className='hmsg '+(tab==='sup'?'sup':'them');
+  tr.innerHTML=`<div class="hav">${tab==='sup'?'ML':'AI'}</div><div class="typing"><i></i><i></i><i></i></div>`;
+  hb.appendChild(tr); hb.scrollTop=hb.scrollHeight;
+  setTimeout(()=>{
+    const t=$('#typingRow'); if(t) t.remove();
+    HELP[tab].push(tab==='ai'?aiReply(v):supReply(v));
+    if(helpTab===tab && helpOpen) renderHelp();
+    else { helpUnread++; updateHelpBadge(); }
+  }, 1000+Math.random()*700);
+}
+function aiReply(q){
+  const i=activeIx();
+  const k=(i.copilot||[]).find(c=>c.type==='knowledge');
+  const gist = k ? k.body.replace(/<[^>]+>/g,'') : `I can pull ${i.customer.name}’s account, policy and history on the spot.`;
+  return {from:'ai',name:'AI assist',text:`Here’s what I found for ${i.customer.name} (${i.lob}): ${gist} Want me to draft the next step?`};
+}
+function supReply(q){
+  const ql=q.toLowerCase(); let t;
+  if(/approv|sign|ok to|can i|allowed/.test(ql)) t='Approved — go ahead. I’ll note the authorisation on the case.';
+  else if(/escalat|angry|complain|supervisor|irate/.test(ql)) t='Acknowledge the frustration first, then offer the resolution. If they still want me, transfer and I’ll take it.';
+  else if(/refund|credit|waive|goodwill/.test(ql)) t='You’re within your limit for that — proceed and log the reason code. Flag me if it exceeds policy.';
+  else t='Got it — you’re handling this well. Proceed, and I’m right here if you need a sign-off.';
+  return {from:'sup',name:'Meera · Team lead',text:t};
+}
+
+/* ============================================================
+   PERSONALIZATION — agent preferences for AI, knowledge & widgets
+   ============================================================ */
+const PALETTES = {
+  'Deep asphalt':   {bg:'#1C1D1F',panel:'#232527','panel-2':'#282A2D',card:'#2E3033','card-hi':'#36383C',line:'#3E4044','line-soft':'#313336'},
+  'Asphalt graphite':{bg:'#26282B',panel:'#2D2F33','panel-2':'#313338',card:'#383A3F','card-hi':'#404247',line:'#494C51','line-soft':'#3A3C41'},
+  'Anthracite':     {bg:'#232A2E',panel:'#2A3236','panel-2':'#2E373B',card:'#353F44','card-hi':'#3D484E',line:'#455157','line-soft':'#374247'},
+  'Warm asphalt':   {bg:'#262320',panel:'#2D2A26','panel-2':'#312E2A',card:'#383430','card-hi':'#403C37',line:'#49443F','line-soft':'#3A3631'}
+};
+function applyPalette(name){
+  const p = PALETTES[name] || PALETTES['Asphalt graphite'];
+  const r = document.documentElement.style;
+  Object.entries(p).forEach(([k,v])=>r.setProperty('--'+k, v));
+}
+
+/* light / dark mode — full token sets so buttons & text stay legible in both */
+const LIGHT_SURFACES = {bg:'#EDEEF1',panel:'#F7F8FA','panel-2':'#FFFFFF',card:'#FFFFFF','card-hi':'#EFF1F4',line:'#DADCE2','line-soft':'#E7E9EE'};
+const THEME_TEXT = {
+  dark:  {tx:'#ECEEF0','tx-2':'#A4A8AE','tx-3':'#74787E'},
+  light: {tx:'#1B2230','tx-2':'#56607A','tx-3':'#8A93A6'}
+};
+const THEME_ACCENT = {
+  dark:  {ai:'#4DA3FF',pending:'#F5B73D',validated:'#43D693',risk:'#FF6B7A',human:'#B79BFF',
+          'ai-bg':'rgba(77,163,255,.10)','pending-bg':'rgba(245,183,61,.12)','validated-bg':'rgba(67,214,147,.12)','risk-bg':'rgba(255,107,122,.12)','human-bg':'rgba(183,155,255,.12)'},
+  light: {ai:'#2563EB',pending:'#B4690B',validated:'#15924B',risk:'#DC2626',human:'#6D4FD6',
+          'ai-bg':'rgba(37,99,235,.08)','pending-bg':'rgba(180,105,11,.10)','validated-bg':'rgba(21,146,75,.10)','risk-bg':'rgba(220,38,38,.07)','human-bg':'rgba(109,79,214,.09)'}
+};
+function applyTheme(){
+  const r = document.documentElement.style;
+  const dark = PREFS.mode !== 'light';
+  const surfaces = dark ? (PALETTES[PREFS.palette] || PALETTES['Asphalt graphite']) : LIGHT_SURFACES;
+  const setAll = o => Object.entries(o).forEach(([k,v])=>r.setProperty('--'+k, v));
+  setAll(surfaces);
+  setAll(THEME_TEXT[dark?'dark':'light']);
+  setAll(THEME_ACCENT[dark?'dark':'light']);
+  r.setProperty('--on-accent', dark ? '#06121d' : '#ffffff');
+  document.documentElement.setAttribute('data-mode', dark?'dark':'light');
+}
+function refreshAiGreeting(){
+  const items = (PREFS.memory && PREFS.memory.items) || [];
+  const ctx = items.length ? ` I’ve got your context: ${items.slice(0,3).join('; ')}.` : '';
+  if(typeof HELP!=='undefined') HELP.ai[0] = {from:'ai',name:'AI assist',text:`Hi Parteek — I’m your AI assist.${ctx} Ask me about the customer, policy, or next step and I’ll tailor it to how you work.`};
+}
+
+const DEFAULT_PREFS = {
+  mode:'dark', palette:'Asphalt graphite', density:'comfortable', reduceMotion:false,
+  cards:{nba:true, reply:true, knowledge:true, selfserve:true},
+  confMin:50, replyTone:'Warm',
+  lobPriority:{'Cards & Payments':true,'Lending':true,'Insurance':true,'Wealth':true},
+  detail:'Detailed', language:'English',
+  consultTab:'ai', autoOpenNeg:false, rememberPos:true,
+  memory:{ instructions:'', items:['Fraud & disputes specialist','Prefers concise, reassuring replies','Primary LOBs: Cards & Wealth'] }
+};
+let PREFS = JSON.parse(JSON.stringify(DEFAULT_PREFS));
+let helpWinPos=null, _prevActive=null;
+
+/* compliance cards are never hidden; others honour the agent's filters */
+function visibleCopilot(i){
+  return i.copilot.filter(c => c.type==='risk' || ((PREFS.cards[c.type]!==false) && ((c.conf||0) >= PREFS.confMin)));
+}
+
+function applyPrefs(){
+  applyTheme();
+  document.body.classList.toggle('compact', PREFS.density==='compact');
+  document.body.classList.toggle('reduced', PREFS.reduceMotion);
+  refreshAiGreeting();
+  if($('#copilotBody')) renderCopilot();
+}
+
+/* generic drag — click vs drag distinguished by movement threshold */
+function makeDraggable(el, handle, opts){
+  opts = opts||{};
+  let sx,sy,ox,oy,dragging=false,moved=false;
+  handle.addEventListener('pointerdown', e=>{
+    if(e.target.closest('[data-nodrag]')) return;
+    dragging=true; moved=false;
+    const r=el.getBoundingClientRect();
+    ox=r.left; oy=r.top; sx=e.clientX; sy=e.clientY;
+    el.style.left=ox+'px'; el.style.top=oy+'px'; el.style.right='auto'; el.style.bottom='auto';
+    try{ handle.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  handle.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if(Math.abs(dx)>4||Math.abs(dy)>4) moved=true;
+    const w=el.offsetWidth, h=el.offsetHeight;
+    let nx=Math.max(6, Math.min(ox+dx, window.innerWidth-w-6));
+    let ny=Math.max(6, Math.min(oy+dy, window.innerHeight-h-6));
+    el.style.left=nx+'px'; el.style.top=ny+'px';
+  });
+  const end = e=>{
+    if(!dragging) return; dragging=false;
+    try{ handle.releasePointerCapture(e.pointerId); }catch(_){}
+    if(opts.onEnd) opts.onEnd(moved, el);
+    if(!moved && opts.onClick) opts.onClick();
+  };
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+}
+
+/* ----- preferences panel ----- */
+function openPreferences(){
+  const seg=(name,opts,cur)=>`<div class="seg" data-seg="${name}">${opts.map(o=>`<button class="seg-btn ${o.v===cur?'on':''}" data-v="${o.v}">${o.l}</button>`).join('')}</div>`;
+  const sw=(id,on)=>`<button class="switch ${on?'on':''}" data-sw="${id}" role="switch" aria-checked="${on}"></button>`;
+  const m=$('#modal');
+  m.innerHTML = `
+    <div class="modal-head">
+      <div class="mh-ic">${ico('gear')}</div>
+      <div><h3>Preferences</h3><div class="mh-sub">Personalize your workspace · saved to your profile</div></div>
+      <button class="mclose" id="mClose">${ico('x')}</button>
+    </div>
+    <div class="modal-body" style="max-height:64vh;overflow-y:auto">
+      <div class="sc-section-label">Appearance</div>
+      <div class="pref-row"><div class="pl"><b>Mode</b><small>Light or dark workspace</small></div>${seg('mode',[{v:'light',l:'Light'},{v:'dark',l:'Dark'}],PREFS.mode)}</div>
+      <div class="pref-row" style="border:none;padding-bottom:2px"><div class="pl"><b>Dark theme shade</b><small>Applies in dark mode</small></div></div>
+      <div class="pref-swatches">
+        ${Object.keys(PALETTES).map(p=>{const c=PALETTES[p];return `<button class="pswatch ${p===PREFS.palette?'on':''}" data-pal="${p}" style="background:${c.bg};border-color:${c.line}" title="${p}"><small>${p.split(' ')[0]}</small><span style="background:${c.card}"></span><span style="background:#4DA3FF"></span><span style="background:#43D693"></span></button>`;}).join('')}
+      </div>
+      <div class="pref-row"><div class="pl"><b>Compact density</b><small>Tighter cards and lists</small></div>${sw('density',PREFS.density==='compact')}</div>
+      <div class="pref-row"><div class="pl"><b>Reduce motion</b><small>Minimise animations</small></div>${sw('reduceMotion',PREFS.reduceMotion)}</div>
+
+      <div class="sc-section-label" style="margin-top:14px">AI copilot</div>
+      <div class="pref-row"><div class="pl"><b>Cards to show</b><small>Compliance always stays on</small></div></div>
+      <div class="pref-chips" id="cardChips">
+        ${[['nba','Next best action'],['reply','Suggested reply'],['knowledge','Knowledge'],['selfserve','Self-serve']].map(([k,l])=>`<button class="pref-chip ${PREFS.cards[k]!==false?'on':''}" data-card="${k}">${l}</button>`).join('')}
+        <span class="pref-chip locked">${ico('shield')} Compliance</span>
+      </div>
+      <div class="pref-row"><div class="pl"><b>Minimum confidence</b><small>Hide suggestions below this</small></div>
+        <div class="slider-wrap"><input type="range" min="50" max="95" step="5" value="${PREFS.confMin}" id="confSlider"><span id="confOut">${PREFS.confMin}%</span></div></div>
+      <div class="pref-row"><div class="pl"><b>Default reply tone</b></div>${seg('replyTone',[{v:'Warm',l:'Warm'},{v:'Concise',l:'Concise'},{v:'Formal',l:'Formal'}],PREFS.replyTone)}</div>
+
+      <div class="sc-section-label" style="margin-top:14px">AI knowledge</div>
+      <div class="pref-row"><div class="pl"><b>Priority lines of business</b><small>Surface these sources first</small></div></div>
+      <div class="pref-chips" id="lobChips">
+        ${Object.keys(PREFS.lobPriority).map(l=>`<button class="pref-chip ${PREFS.lobPriority[l]?'on':''}" data-lob="${l}">${l}</button>`).join('')}
+      </div>
+      <div class="pref-row"><div class="pl"><b>Answer detail</b></div>${seg('detail',[{v:'Brief',l:'Brief'},{v:'Detailed',l:'Detailed'}],PREFS.detail)}</div>
+      <div class="pref-row"><div class="pl"><b>Language</b></div>${seg('language',[{v:'English',l:'English'},{v:'Hindi',l:'Hindi'},{v:'Tamil',l:'Tamil'}],PREFS.language)}</div>
+
+      <div class="sc-section-label" style="margin-top:14px">AI context memory</div>
+      <div class="pref-row" style="border:none;padding-bottom:4px"><div class="pl"><b>Standing instructions to your copilot</b><small>The AI keeps these in mind on every interaction</small></div></div>
+      <textarea class="pref-textarea" id="memInstr" placeholder="e.g. Keep replies under 3 sentences. Always flag cross-sell for Wealth customers. I specialise in fraud disputes.">${(PREFS.memory.instructions||'').replace(/</g,'&lt;')}</textarea>
+      <div class="pref-row" style="border:none;padding-bottom:4px"><div class="pl"><b>What the AI remembers about you</b><small>Tap × to forget · add your own</small></div></div>
+      <div class="mem-list" id="memList"></div>
+      <div class="mem-add"><input id="memInput" placeholder="Add a memory…" autocomplete="off"><button id="memAdd">${ico('check')}</button></div>
+
+      <div class="sc-section-label" style="margin-top:14px">Consult widget</div>
+      <div class="pref-row"><div class="pl"><b>Default tab</b></div>${seg('consultTab',[{v:'ai',l:'AI assist'},{v:'sup',l:'Supervisor'}],PREFS.consultTab)}</div>
+      <div class="pref-row"><div class="pl"><b>Auto-open on negative sentiment</b><small>Pop the consult when a call sours</small></div>${sw('autoOpenNeg',PREFS.autoOpenNeg)}</div>
+      <div class="pref-row"><div class="pl"><b>Remember widget position</b></div>${sw('rememberPos',PREFS.rememberPos)}</div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-review" id="prefReset">Reset to defaults</button>
+      <button class="mf-approve" id="prefSave">${ico('check')} Save preferences</button>
+    </div>`;
+  $('#modalScrim').classList.add('show');
+  $('#mClose').onclick = closeModal;
+
+  m.querySelectorAll('.pswatch').forEach(b=>b.onclick=()=>{ PREFS.palette=b.dataset.pal; m.querySelectorAll('.pswatch').forEach(x=>x.classList.toggle('on',x===b)); applyPrefs(); });
+  m.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.sw;
+    if(k==='density'){ PREFS.density = PREFS.density==='compact'?'comfortable':'compact'; b.classList.toggle('on',PREFS.density==='compact'); }
+    else { PREFS[k]=!PREFS[k]; b.classList.toggle('on',PREFS[k]); b.setAttribute('aria-checked',PREFS[k]); }
+    applyPrefs();
+  });
+  m.querySelectorAll('#cardChips [data-card]').forEach(b=>b.onclick=()=>{ const k=b.dataset.card; PREFS.cards[k]=!PREFS.cards[k]; b.classList.toggle('on',PREFS.cards[k]); applyPrefs(); });
+  m.querySelectorAll('#lobChips [data-lob]').forEach(b=>b.onclick=()=>{ const l=b.dataset.lob; PREFS.lobPriority[l]=!PREFS.lobPriority[l]; b.classList.toggle('on',PREFS.lobPriority[l]); });
+  m.querySelectorAll('.seg').forEach(sg=>sg.querySelectorAll('.seg-btn').forEach(b=>b.onclick=()=>{
+    const name=sg.dataset.seg; PREFS[name]=b.dataset.v;
+    sg.querySelectorAll('.seg-btn').forEach(x=>x.classList.toggle('on',x===b));
+    if(name==='consultTab'){ helpTab=PREFS.consultTab; if(helpOpen) renderHelp(); }
+    applyPrefs();
+  }));
+  const cs=$('#confSlider'), co=$('#confOut');
+  if(cs) cs.oninput=()=>{ PREFS.confMin=parseInt(cs.value,10); co.textContent=cs.value+'%'; renderCopilot(); };
+
+  // AI context memory
+  const renderMemList=()=>{
+    const list=$('#memList'); if(!list) return;
+    list.innerHTML = PREFS.memory.items.length
+      ? PREFS.memory.items.map((it,idx)=>`<span class="mem-chip">${ico('cap')}<span>${it.replace(/</g,'&lt;')}</span><button data-i="${idx}" title="Forget">${ico('x')}</button></span>`).join('')
+      : `<span class="mem-empty">No memories yet — the AI will personalize as you add them.</span>`;
+    list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ PREFS.memory.items.splice(parseInt(b.dataset.i,10),1); renderMemList(); refreshAiGreeting(); });
+  };
+  renderMemList();
+  const mi=$('#memInstr'); if(mi) mi.addEventListener('input',e=>{ PREFS.memory.instructions=e.target.value; });
+  const addMem=()=>{ const inp=$('#memInput'); const v=inp.value.trim(); if(!v) return; PREFS.memory.items.push(v); inp.value=''; renderMemList(); refreshAiGreeting(); };
+  $('#memAdd').onclick=addMem;
+  $('#memInput').addEventListener('keydown',e=>{ if(e.key==='Enter') addMem(); });
+  $('#prefReset').onclick=()=>{ PREFS=JSON.parse(JSON.stringify(DEFAULT_PREFS)); helpTab=PREFS.consultTab; applyPrefs(); openPreferences(); toast('ai','Preferences reset to defaults'); };
+  $('#prefSave').onclick=()=>{ applyPrefs(); closeModal(); toast('ok','Preferences saved to your profile'); };
+}
+
+/* ----- master render ----- */
+function renderAll(){
+  renderQueue();
+  renderChannelBar();
+  renderCust360();
+  renderConvoHead();
+  renderConvoBody();
+  renderComposer();
+  renderCopilot();
+  renderAgents();
+  updatePerfChip();
+  updateHelpContext();
+  // refresh LOB pill to match active interaction
+  $('#lobPill').innerHTML=`<span class="dot"></span> ${activeIx().lob}`;
+  // preference: pop the consult widget when entering a negative-sentiment interaction
+  if(typeof PREFS!=='undefined' && PREFS.autoOpenNeg && activeId!==_prevActive && activeIx().sentiment==='neg' && !helpOpen){ toggleHelp(true); }
+  _prevActive = activeId;
+}
+renderAll();
+initHelp();
+applyPrefs();
+</script>
+</body>
+</html>
